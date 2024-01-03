@@ -21,11 +21,12 @@ import Navbar from './components/Navbar.vue'
   flex-direction: column;
 }
 
-#all-content :first-child {
+#all-content > :first-child {
   flex: 0 0 1px;
 }
 .main-content {
   flex: 1 0 1px;
   overflow-y: scroll;
+  background-color: #c6ffdc;
 }
 </style>
