@@ -1,12 +1,12 @@
 <template>
     <div class="main">
-        <div class="sticky-top p-2 my-3 mx-2 rounded bg-light-grey">
-            <div>
+        <div class="sticky-top p-3 my-3 mx-2 rounded-4 bg-dark-green text-white">
+            <div class="d-flex align-self-start mb-2">
                 <h1 class="d-inline-block me-5">Playlist Selection</h1>
-                <p class="d-inline-block">{{ playlists_selected }}/ {{ user_playlists.length }} selected</p>
+                <p class="d-inline-block mt-2">{{ playlists_selected }}/ {{ user_playlists.length }} selected</p>
             </div>
 
-            <button class="btn btn-success" @click="addAll()">Add All</button>
+            <button class="btn btn-warning" @click="addAll()">Add All</button>
             <button class="btn btn-danger ms-3" @click="removeAll()">Remove All</button>
             <button class="btn btn-secondary ms-3" @click="sortByName()">Sort by Name {{ curr_sort == 'name-desc' ? '^' : 'v' }}</button>
             <button class="btn btn-secondary ms-3" @click="sortByNumSongs()">Sort by No. Songs {{ curr_sort == 'num-song-desc' ? '^' : 'v' }}</button>
@@ -19,7 +19,7 @@
         <div class="container-fluid">
             <div class="row">
                 <div v-for="(e_playlist, index) in user_playlists" :key="index" class="col-12 col-md-6 col-lg-4">
-                    <div class="card border-0 mb-3 pointer-hover card-styling position-relative" :class="e_playlist.to_add ? 'bg-light-green' : ''" @click="e_playlist.to_add = !e_playlist.to_add">
+                    <div class="card border-0 mb-3 pointer-hover card-styling position-relative" :class="e_playlist.to_add ? 'bg-light-green text-white' : ''" @click="e_playlist.to_add = !e_playlist.to_add">
                         <div class="row g-0">
                             <div class="col-auto">
                                 <img v-if="e_playlist.images.length > 0 " :src="e_playlist.images[0].url" class="rounded-start img-125">
@@ -167,10 +167,10 @@
   
   <style scoped>
     .bg-light-green {
-        background-color: #9ff2bf;
+        background-color: #278049;
     }
-    .bg-light-grey {
-        background-color: #e5e5e5;
+    .bg-dark-green {
+        background-image: linear-gradient(to bottom, #268049, #3faf6aef, #abebc373);
     }
     .img-125 {
         width: 125px;
@@ -183,6 +183,10 @@
     .card-styling {
         height: 125px;
         min-width: 1px;
+        transition: all 0.2s ease-in-out;
+    }
+    .card-styling:hover {
+        box-shadow: 4px 4px 12px #088538;
     }
     .truncate-two-lines {
         display: -webkit-box;
