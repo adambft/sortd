@@ -146,7 +146,7 @@ export const SpotifyApiUtils = {
         const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
         const redirectUri = 'http://localhost:5173/account_authorize';
         
-        const scope = 'user-read-private user-read-email playlist-read-private playlist-read-collaborative'; // Check out other scopes here: https://developer.spotify.com/documentation/web-api/concepts/scopes
+        const scope = 'user-read-private user-read-email playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private'; // Check out other scopes here: https://developer.spotify.com/documentation/web-api/concepts/scopes
         const authUrl = new URL("https://accounts.spotify.com/authorize")
         
         // generated in the previous step
@@ -382,4 +382,41 @@ export const SpotifyApiUtils = {
 
         return tracks.length;
     },
+
+    async createNewPlaylist(playlist_name, playlist_desc=false) {
+        // Create a new playlist
+
+        await this.updateAccessToken();
+
+        var user_id
+
+        if (localStorage.getItem('spotifyUserId')) {
+            user_id = localStorage.getItem('spotifyUserId');
+        } else {
+            user_id = await this.getUserId();
+        }
+
+        var new_pl_info = {
+            name: playlist_name,
+        }
+
+        if (playlist_desc) {
+            new_pl_info.description = playlist_desc;
+        }
+
+        try {
+            const response = await axios.post(`https://api.spotify.com/v1/users/${user_id}/playlists`, new_pl_info, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+            });
+
+            var new_playlist = response.data;
+
+            return new_playlist;
+        } catch (error) {
+            console.error("Error in running createNewPlaylist(): ", error);
+            throw error;
+        }
+    }
 }

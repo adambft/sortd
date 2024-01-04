@@ -20,8 +20,6 @@
     },
     async mounted() {
       this.local_storage_shit = JSON.stringify(localStorage);
-
-      console.log(await firebase.writeDb('sd_tan/playlists', 'test'))
     }
   };
 </script>

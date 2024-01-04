@@ -1,10 +1,10 @@
 <template>
-    <div class="main">
+    <div class="main px-4 py-2">
         <div class="sticky-top">
-            <div class="sticky-top bg-light-green p-2"></div>
+            <div class="bg-light-green p-2"></div>
             <div class="p-3 mb-3 mx-2 rounded-4 bg-dark-green text-white">
                 <div class="d-flex align-self-start mb-2">
-                    <h1 class="d-inline-block me-5">Playlist Selection</h1>
+                    <h1 class="d-inline-block me-5">Song Selection</h1>
                     <p class="d-inline-block mt-2">{{ playlists_selected }}/ {{ user_playlists.length }} selected</p>
                     <p class="mt-2 ms-3 error-msg" :class="show_error ? '' : 'opacity-0' ">
                         <span class="badge rounded-pill text-bg-danger py-2 px-3">No playlists added yet</span>
@@ -17,7 +17,7 @@
                 <button class="btn btn-secondary ms-3" @click="sortByNumSongs()">Sort by No. Songs {{ curr_sort == 'num-song-desc' ? '^' : 'v' }}</button>
                 <button class="btn btn-secondary ms-3" @click="sortBySelected()">Sort by Selected {{ curr_sort == 'selected-desc' ? '^' : 'v' }}</button>
     
-                <button class="btn btn-secondary ms-5" @click="pushToFirebase()">Continue</button>
+                <button class="btn btn-success ms-5" @click="pushToFirebase()">Continue ></button>
             </div>
         </div>
         
@@ -78,6 +78,7 @@
                 num_tracks_to_add: 0,
                 tracks_added: 0,
                 show_error: false,
+                my_modal: null,
             };
         },
         computed: {
@@ -112,17 +113,18 @@
 
                 e_playlist.to_add = !e_playlist.to_add
             },
-            showLoadingModal() {
-                var myModal = new bootstrap.Modal(document.getElementById('loadingModal'), {
-                    keyboard: false
-                })
-                myModal.show()
+            showLoadingModal(to_show=true) {
+                if (!to_show) {
+                    this.myModal.hide()
+                } else {
+                    this.myModal.show()
+                }
             },
             async pushToFirebase() {
                 if (this.playlists_selected == 0) {
                     this.show_error = true
 
-                      // Set a timeout to turn off the error after 5 seconds
+                    // Set a timeout to turn off the error after 3 seconds
                     setTimeout(() => {
                         this.show_error = false;
                     }, 3000);
@@ -160,6 +162,12 @@
                         this.tracks_added += num_curr_processed
                     }
                 }
+
+                // Redirect to the playlist create page after 2 seconds
+                setTimeout(() => {
+                    this.showLoadingModal(false)
+                    this.$router.push('/app/playlist_create')
+                }, 1500);
             },
             sortByName() {
                 var sort_dir = 1
@@ -226,6 +234,10 @@
             for (let key in this.user_playlists) {
                 this.user_playlists[key]["to_add"] = false;
             }
+
+            this.myModal = new bootstrap.Modal(document.getElementById('loadingModal'), {
+                keyboard: false
+            })
         }
     };
   </script>
