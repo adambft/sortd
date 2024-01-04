@@ -1,4 +1,5 @@
 import axios from 'axios';
+import * as firebase from './firebase'
 
 // Helper functions from Spotify API Official Documentation =========================================[start]
 const generateRandomString = (length) => {
@@ -21,6 +22,33 @@ const base64encode = (input) => {
 }
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[end]
 
+
+// Personal helper functions =======================================================================[start]
+function mergeTrackObjects(obj1, obj2) {
+    const result = {};
+
+    // Combine ids from both objects
+    const allIds = new Set([...Object.keys(obj1), ...Object.keys(obj2)]);
+
+    // Iterate through all ids
+    allIds.forEach(e_id => {
+        // Check if the id is present in both objects
+        if (obj1.hasOwnProperty(e_id) && obj2.hasOwnProperty(e_id)) {
+            // Compare "date added" to determine which one to include
+            const dateAdded1 = new Date(obj1[e_id]["date_added"]);
+            const dateAdded2 = new Date(obj2[e_id]["date_added"]);
+
+            // Choose the one with the latest "date added"
+            result[e_id] = dateAdded1.getTime() > dateAdded2.getTime() ? { ...obj1[e_id] } : { ...obj2[e_id] };
+        } else {
+            // Include the id from the object that has it
+            result[e_id] = obj1.hasOwnProperty(e_id) ? { ...obj1[e_id] } : { ...obj2[e_id] };
+        }
+    });
+
+    return result;
+}
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[end]
 
 export const SpotifyApiUtils = {
     async getAccessToken_client() {
@@ -245,22 +273,113 @@ export const SpotifyApiUtils = {
         }
     },
 
-    async getAllPlaylistTracks(playlist_id) {
-        var res_tracks = [];
-        var offset = 0;
-        var num_tracks = 50;
-        var num_tracks_returned = num_tracks;
+    async getTracksAudioFeatures(track_ids) {
+        // Get audio features of a track
 
-        while (num_tracks_returned == num_tracks) {
-            var tracks = await this.getPlaylistTracks(playlist_id, num_tracks, offset);
+        await this.updateAccessToken();
 
-            res_tracks.push(...tracks);
-            offset += num_tracks;
-            num_tracks_returned = tracks.length;
+        try {
+            const response = await axios.get(`https://api.spotify.com/v1/audio-features?ids=${track_ids}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+            });
+
+            var audio_features = response.data.audio_features;
+
+            return audio_features;
+        } catch (error) {
+            console.error("Error in running getTracksAudioFeatures(): ", error);
+            throw error;
+        }
+    },
+
+    async getPlaylistTracksAndPushToDb(playlist_id, num_tracks = 50, offset = 0) {
+        var tracks = await this.getPlaylistTracks(playlist_id, num_tracks, offset);
+        var res_to_db = {};
+        var track_ids = [];
+
+        // Build result with track data
+        for (var i = 0; i < tracks.length; i++) {
+            var e_track = tracks[i];
+
+            var track_id = e_track.track.id;
+
+            var track_name = e_track.track.name;
+            var track_date_added = e_track.added_at;
+            var track_release_date = e_track.track.album.release_date;
+            var artist_ids = []
+
+            e_track.track.artists.forEach(element => {
+                var e_artist_id = element.id;
+                artist_ids.push(e_artist_id);
+            });
+
+            var track_popularity = e_track.track.popularity;
+            var track_preview_url = e_track.track.preview_url;
+            var track_img_url = e_track.track.album.images[0].url;
+
+            res_to_db[track_id] = {
+                name: track_name,
+                date_added: track_date_added,
+                release_date: track_release_date,
+                artist_ids: artist_ids,
+                popularity: track_popularity,
+                preview_url: track_preview_url,
+                img_url: track_img_url,
+            }
+
+            track_ids.push(track_id);
         }
 
-        console.log("All Tracks: ", res_tracks);
+        // Build result with audio features
+        var audio_features = await this.getTracksAudioFeatures(track_ids.join(','))
 
-        return res_tracks;
+        for (var i = 0; i < audio_features.length; i++) {
+            var e_audio_feature = audio_features[i];
+
+            var track_id = e_audio_feature.id;
+            
+            var acousticness = e_audio_feature.acousticness;
+            var danceability = e_audio_feature.danceability;
+            var energy = e_audio_feature.energy;
+            var instrumentalness = e_audio_feature.instrumentalness;
+            var key = e_audio_feature.key;
+            var liveness = e_audio_feature.liveness;
+            var loudness = e_audio_feature.loudness;
+            var mode = e_audio_feature.mode;
+            var speechiness = e_audio_feature.speechiness;
+            var tempo = e_audio_feature.tempo;
+            var time_signature = e_audio_feature.time_signature;
+            var valence = e_audio_feature.valence;
+
+            res_to_db[track_id].acousticness = acousticness;
+            res_to_db[track_id].danceability = danceability;
+            res_to_db[track_id].energy = energy;
+            res_to_db[track_id].instrumentalness = instrumentalness;
+            res_to_db[track_id].key = key;
+            res_to_db[track_id].liveness = liveness;
+            res_to_db[track_id].loudness = loudness;
+            res_to_db[track_id].mode = mode;
+            res_to_db[track_id].speechiness = speechiness;
+            res_to_db[track_id].tempo = tempo;
+            res_to_db[track_id].time_signature = time_signature;
+            res_to_db[track_id].valence = valence;
+        }
+
+        // Fetch existing data from db
+        var existing_db_data = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/songs_selected`);
+
+        if (existing_db_data == null) {
+            existing_db_data = {};
+        }
+
+        // Merge existing data with new data
+        var merged_data = mergeTrackObjects(existing_db_data, res_to_db);
+
+        // Push back to db
+        await firebase.writeDb(`${localStorage.getItem('spotifyUserId')}/songs_selected`, merged_data);
+
+        return tracks.length;
     },
 }

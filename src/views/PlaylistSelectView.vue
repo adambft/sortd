@@ -1,25 +1,30 @@
 <template>
     <div class="main">
-        <div class="sticky-top p-3 my-3 mx-2 rounded-4 bg-dark-green text-white">
-            <div class="d-flex align-self-start mb-2">
-                <h1 class="d-inline-block me-5">Playlist Selection</h1>
-                <p class="d-inline-block mt-2">{{ playlists_selected }}/ {{ user_playlists.length }} selected</p>
+        <div class="sticky-top">
+            <div class="sticky-top bg-light-green p-2"></div>
+            <div class="p-3 mb-3 mx-2 rounded-4 bg-dark-green text-white">
+                <div class="d-flex align-self-start mb-2">
+                    <h1 class="d-inline-block me-5">Playlist Selection</h1>
+                    <p class="d-inline-block mt-2">{{ playlists_selected }}/ {{ user_playlists.length }} selected</p>
+                    <p class="mt-2 ms-3 error-msg" :class="show_error ? '' : 'opacity-0' ">
+                        <span class="badge rounded-pill text-bg-danger py-2 px-3">No playlists added yet</span>
+                    </p>
+                </div>
+    
+                <button class="btn btn-warning" @click="addAll()">Add All</button>
+                <button class="btn btn-danger ms-3" @click="removeAll()">Remove All</button>
+                <button class="btn btn-secondary ms-3" @click="sortByName()">Sort by Name {{ curr_sort == 'name-desc' ? '^' : 'v' }}</button>
+                <button class="btn btn-secondary ms-3" @click="sortByNumSongs()">Sort by No. Songs {{ curr_sort == 'num-song-desc' ? '^' : 'v' }}</button>
+                <button class="btn btn-secondary ms-3" @click="sortBySelected()">Sort by Selected {{ curr_sort == 'selected-desc' ? '^' : 'v' }}</button>
+    
+                <button class="btn btn-secondary ms-5" @click="pushToFirebase()">Continue</button>
             </div>
-
-            <button class="btn btn-warning" @click="addAll()">Add All</button>
-            <button class="btn btn-danger ms-3" @click="removeAll()">Remove All</button>
-            <button class="btn btn-secondary ms-3" @click="sortByName()">Sort by Name {{ curr_sort == 'name-desc' ? '^' : 'v' }}</button>
-            <button class="btn btn-secondary ms-3" @click="sortByNumSongs()">Sort by No. Songs {{ curr_sort == 'num-song-desc' ? '^' : 'v' }}</button>
-            <button class="btn btn-secondary ms-3" @click="sortBySelected()">Sort by Selected {{ curr_sort == 'selected-desc' ? '^' : 'v' }}</button>
-
-            <button class="btn btn-secondary ms-5" @click="pushToFirebase()">Continue</button>
-            <button class="btn btn-primary ms-3" @click="testfunc()">Get all songs</button>
         </div>
         
         <div class="container-fluid">
             <div class="row">
                 <div v-for="(e_playlist, index) in user_playlists" :key="index" class="col-12 col-md-6 col-lg-4">
-                    <div class="card border-0 mb-3 pointer-hover card-styling position-relative" :class="e_playlist.to_add ? 'bg-light-green text-white' : ''" @click="e_playlist.to_add = !e_playlist.to_add">
+                    <div class="card border-0 mb-3 pointer-hover card-styling position-relative" :class="e_playlist.to_add ? 'bg-selected text-white' : ''" @click="cardClicked(e_playlist)">
                         <div class="row g-0">
                             <div class="col-auto">
                                 <img v-if="e_playlist.images.length > 0 " :src="e_playlist.images[0].url" class="rounded-start img-125">
@@ -28,7 +33,7 @@
             
                             <div class="col">
                                 <div class="card-body">
-                                    <h3 class="card-title truncate-two-lines">{{ index + 1 }} - {{ e_playlist.name }}</h3>
+                                    <h3 class="card-title truncate-two-lines text-break">{{ index + 1 }} - {{ e_playlist.name }}</h3>
                                     <p class="card-text">No. songs: {{ e_playlist.tracks.total }}</p>
                                     
                                     <img src="../assets/checked.png" width="20px" class="position-absolute top-0 end-0 m-2" v-if="e_playlist.to_add">
@@ -40,22 +45,51 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" tabindex="-1" id="loadingModal" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Adding Your Songs</h5>
+                </div>
+
+                <div class="modal-body">
+                    <p>Songs Added {{ tracks_added }} / {{ num_tracks_to_add }}</p>
+
+                    <div class="progress" role="progressbar" :aria-valuenow="percentage_complete" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar bg-success" :style="{ width: percentage_complete + '%' }">{{ percentage_complete }}%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
   </template>
   
   <script>
     import { SpotifyApiUtils } from '../js_methods/spotify_api'
     import * as firebase from '../js_methods/firebase'
+    import * as bootstrap from 'bootstrap'
   
     export default {
         data() {
             return {
                 user_playlists: [],
                 curr_sort: "",
+                num_tracks_to_add: 0,
+                tracks_added: 0,
+                show_error: false,
             };
         },
         computed: {
             playlists_selected() {
                 return this.user_playlists.filter(obj => obj.to_add === true).length
+            },
+            percentage_complete() {
+                if (this.tracks_added == 0) {
+                    return 0
+                }
+
+                return Math.ceil(this.tracks_added / this.num_tracks_to_add * 100)
             }
         },
         methods: {
@@ -69,8 +103,37 @@
                     this.user_playlists[key]["to_add"] = false;
                 }
             },
+            cardClicked(e_playlist) {
+                if (e_playlist.to_add) {
+                    this.num_tracks_to_add -= e_playlist.tracks.total
+                } else {
+                    this.num_tracks_to_add += e_playlist.tracks.total
+                }
+
+                e_playlist.to_add = !e_playlist.to_add
+            },
+            showLoadingModal() {
+                var myModal = new bootstrap.Modal(document.getElementById('loadingModal'), {
+                    keyboard: false
+                })
+                myModal.show()
+            },
             async pushToFirebase() {
+                if (this.playlists_selected == 0) {
+                    this.show_error = true
+
+                      // Set a timeout to turn off the error after 5 seconds
+                    setTimeout(() => {
+                        this.show_error = false;
+                    }, 3000);
+
+                    return
+                }
+
+                this.showLoadingModal()
+
                 let playlists_to_add = this.user_playlists
+
                 .filter(obj => obj.to_add === true)
                 .map(obj => {
                     let newObj = { ...obj };
@@ -84,6 +147,19 @@
                 .reduce((acc, obj) => ({ ...acc, ...obj }), {}); // Merge objects into a single object
 
                 await firebase.writeDb(`${localStorage.getItem('spotifyUserId')}/curr_playlists`, playlists_to_add)
+
+                // process each playlist's tracks to db
+                for (let pl_id in playlists_to_add) {
+                    var e_pl = playlists_to_add[pl_id]
+                    var num_tracks = e_pl.tracks.total
+                    var num_tracks_processed = 0
+
+                    while (num_tracks_processed < num_tracks) {
+                        var num_curr_processed = await SpotifyApiUtils.getPlaylistTracksAndPushToDb(pl_id, 50, num_tracks_processed)
+                        num_tracks_processed += num_curr_processed
+                        this.tracks_added += num_curr_processed
+                    }
+                }
             },
             sortByName() {
                 var sort_dir = 1
@@ -143,17 +219,6 @@
                     return (aValue - bValue) * sort_dir;
                 })
             },
-            testfunc() {
-                let playlists_to_add = this.user_playlists
-                .filter(obj => obj.to_add === true)
-
-                for (let key in playlists_to_add) {
-                    let playlist = playlists_to_add[key]
-                    let playlist_id = playlist.id
-
-                    SpotifyApiUtils.getAllPlaylistTracks(playlist_id)
-                }
-            }
         },
         async mounted() {
             this.user_playlists = await SpotifyApiUtils.getAllPlaylists()
@@ -166,11 +231,14 @@
   </script>
   
   <style scoped>
-    .bg-light-green {
+    .bg-selected {
         background-color: #278049;
     }
     .bg-dark-green {
-        background-image: linear-gradient(to bottom, #268049, #3faf6aef, #abebc373);
+        background-image: linear-gradient(to bottom, #06BE4B, #06be4ddb, #abebc400);
+    }
+    .bg-light-green {
+        background-color: #c6ffdc;
     }
     .img-125 {
         width: 125px;
@@ -194,5 +262,8 @@
         -webkit-box-orient: vertical;  
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+    .error-msg {
+        transition: all 0.15s ease-in-out;
     }
   </style>
