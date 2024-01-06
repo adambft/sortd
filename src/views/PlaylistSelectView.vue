@@ -230,6 +230,7 @@
         },
         async mounted() {
             this.user_playlists = await SpotifyApiUtils.getAllPlaylists()
+            await SpotifyApiUtils.getUserId()
 
             for (let key in this.user_playlists) {
                 this.user_playlists[key]["to_add"] = false;

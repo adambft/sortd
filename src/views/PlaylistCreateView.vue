@@ -227,11 +227,13 @@
                 }
 
                 await firebase.writeDb(`${localStorage.getItem('spotifyUserId')}/new_playlists`, new_pl)
+                await firebase.writeDb(`${localStorage.getItem('spotifyUserId')}/sorted_songs`, '')
                 this.$router.push('/app/sort')
             }
         },
         async mounted() {
             var temp_user_playlists = await SpotifyApiUtils.getAllPlaylists()
+            await SpotifyApiUtils.getUserId()
 
             // Remove playlists that already have tracks added (aka only take playlists that are empty)
             for (var i = 0; i < temp_user_playlists.length; i++) {

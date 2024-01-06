@@ -134,7 +134,15 @@ export const SpotifyApiUtils = {
             localStorage.setItem('accessTokenTime', Date.now());
             localStorage.removeItem('awaiting_access_token_update');
 
-            await this.getUserId();
+            var user_spotify_id = await this.getUserId();
+
+            // check if user account already created
+            var existing_db_data = await firebase.readDb(`${user_spotify_id}`);
+
+            if (existing_db_data == null) {
+                // create new user account
+                await firebase.writeDb(`${user_spotify_id}`, '')
+            }
         }
     },
     
@@ -146,7 +154,7 @@ export const SpotifyApiUtils = {
         const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
         const redirectUri = 'http://localhost:5173/account_authorize';
         
-        const scope = 'user-read-private user-read-email playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private'; // Check out other scopes here: https://developer.spotify.com/documentation/web-api/concepts/scopes
+        const scope = 'user-read-private user-read-email playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private user-read-playback-state user-modify-playback-state user-read-currently-playing app-remote-control streaming'; // Check out other scopes here: https://developer.spotify.com/documentation/web-api/concepts/scopes
         const authUrl = new URL("https://accounts.spotify.com/authorize")
         
         // generated in the previous step
@@ -185,6 +193,11 @@ export const SpotifyApiUtils = {
 
     async getUserId() {
         // Get the user id of the user
+
+        // Break if user id is already stored
+        if (localStorage.getItem('spotifyUserId')) {
+            return localStorage.getItem('spotifyUserId');
+        }
     
         await this.updateAccessToken();
     
@@ -211,13 +224,7 @@ export const SpotifyApiUtils = {
 
         await this.updateAccessToken();
 
-        var user_id
-
-        if (localStorage.getItem('spotifyUserId')) {
-            user_id = localStorage.getItem('spotifyUserId');
-        } else {
-            user_id = await this.getUserId();
-        }
+        var user_id = await this.getUserId()
 
         try {
             const response = await axios.get(`https://api.spotify.com/v1/users/${user_id}/playlists?limit=${num_playlists}&offset=${offset}`, {
@@ -250,6 +257,27 @@ export const SpotifyApiUtils = {
         }
 
         return res_playlists;
+    },
+
+    async getOnePlaylist(playlist_id) {
+        // Get one playlist of the user
+
+        await this.updateAccessToken();
+
+        try {
+            const response = await axios.get(`https://api.spotify.com/v1/playlists/${playlist_id}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+            });
+
+            var playlist = response.data;
+
+            return playlist;
+        } catch (error) {
+            console.error("Error in running getOnePlaylist(): ", error);
+            throw error;
+        }
     },
 
     async getPlaylistTracks(playlist_id, num_tracks = 50, offset = 0) {
@@ -290,6 +318,27 @@ export const SpotifyApiUtils = {
             return audio_features;
         } catch (error) {
             console.error("Error in running getTracksAudioFeatures(): ", error);
+            throw error;
+        }
+    },
+
+    async getOneTrack(track_id) {
+        // Get one track
+
+        await this.updateAccessToken();
+
+        try {
+            const response = await axios.get(`https://api.spotify.com/v1/tracks/${track_id}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+            });
+
+            var track = response.data;
+
+            return track;
+        } catch (error) {
+            console.error("Error in running getOneTrack(): ", error);
             throw error;
         }
     },
@@ -388,13 +437,7 @@ export const SpotifyApiUtils = {
 
         await this.updateAccessToken();
 
-        var user_id
-
-        if (localStorage.getItem('spotifyUserId')) {
-            user_id = localStorage.getItem('spotifyUserId');
-        } else {
-            user_id = await this.getUserId();
-        }
+        var user_id = await this.getUserId();
 
         var new_pl_info = {
             name: playlist_name,
@@ -416,6 +459,107 @@ export const SpotifyApiUtils = {
             return new_playlist;
         } catch (error) {
             console.error("Error in running createNewPlaylist(): ", error);
+            throw error;
+        }
+    },
+
+    async getArtists(artist_ids) {
+        // Get artists
+
+        await this.updateAccessToken();
+
+        try {
+            const response = await axios.get(`https://api.spotify.com/v1/artists?ids=${artist_ids}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+            });
+
+            var artists = response.data.artists;
+
+            return artists;
+        } catch (error) {
+            console.error("Error in running getArtists(): ", error);
+            throw error;
+        }
+    },
+
+    async transferPlaybackToBrowser() {
+        // Transfer playback to browser
+
+        if (!localStorage.getItem('spotifyDeviceId')) {
+            console.log("No spotify device id");
+
+            return false;
+        }
+
+        await this.updateAccessToken();
+
+        try {
+            const response = await axios.put(`https://api.spotify.com/v1/me/player`, {
+                device_ids: [localStorage.getItem('spotifyDeviceId')],
+                play: false,
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+            });
+
+            return true;
+        } catch (error) {
+            console.error("Error in running trasnferPlaybackToBrowser(): ", error);
+            throw error;
+        }
+    },
+
+    async queueTrack(track_id) {
+        // Queue a track
+
+        console.log("Queueing track: ", track_id)
+
+        await this.updateAccessToken();
+
+        if (!localStorage.getItem('spotifyDeviceId')) {
+            console.error("Error in running queueTrack(): No spotify device id");
+
+            return false;
+        }
+
+        try {
+            const response = await axios.put(`https://api.spotify.com/v1/me/player/play`,
+            {
+                uris: [`spotify:track:${track_id}`],
+                position_ms: 0,
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+            });
+
+            return true;
+        } catch (error) {
+            console.error("Error in running queueTrack(): ", error);
+            throw error;
+        }    
+    },
+
+    async getPlaybackState() {
+        // Get playback state
+
+        await this.updateAccessToken();
+
+        try {
+            const response = await axios.get(`https://api.spotify.com/v1/me/player`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+            });
+
+            var playback_state = response.data;
+            console.log("playback_state: ", playback_state);
+            return playback_state;
+        } catch (error) {
+            console.error("Error in running getPlaybackState(): ", error);
             throw error;
         }
     }
