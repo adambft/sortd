@@ -11,7 +11,7 @@ import { RouterLink } from 'vue-router'
         <div class="navbar-menu">
             <div class="navbar-start">
                 <RouterLink to="/" class="navbar-item">Home</RouterLink>
-                <RouterLink to="/app" class="navbar-item">App</RouterLink>
+                <RouterLink to="/app" class="navbar-item" :class="{ 'router-link-active': $route.path.startsWith('/app') }">App</RouterLink>
             </div>
         </div>
     </nav>

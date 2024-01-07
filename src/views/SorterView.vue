@@ -1,9 +1,16 @@
 <template>
     <div class="container-fluid h-100">
+        <div class="row p-3 pb-2">
+            <div class="progress rounded-5 p-0 bg-progress-custom position-relative" role="progressbar" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100" style="height: 20px">
+                <div class="position-absolute w-100 text-center" v-if="perc_songs_sorted < 10">{{ num_songs_sorted }}/{{ total_num_songs }} Songs Sorted</div>
+                <div class="progress-bar bg-success" :style="{width: `${perc_songs_sorted}%`}">{{ perc_songs_sorted >= 10 ? `${num_songs_sorted }/${ total_num_songs } Songs Sorted` : `` }}</div>
+            </div>
+        </div>
+
         <div class="row h-100">
             <div class="col-6">
-                <div class="sticky-top pt-4">
-                    <div v-if="curr_track !== null" class="text-start">
+                <div class="sticky-top pt-3 vh-100">
+                    <div :class="curr_track==null ? 'd-none' : ''" class="text-start">
                         <div class="mb-3">
                             <div id="embed-iframe"></div>
                         </div>
@@ -18,10 +25,17 @@
                             {{ e_genre_data.name }}
                         </span>
                     </div>
+
+                    <div :class="curr_track==null ? '' : 'd-none'" class="d-flex justify-content-center vh-100 align-items-center">
+                        <div class="w-100">
+                            <font-awesome-icon icon="fa-solid fa-spinner" class="fa-spin-pulse fa-4x text-success w-100" />
+                            <h3 class="text-center mt-4 text-success">Loading song</h3>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="col-6 padding-lg pt-2">
+            <div class="col-6 padding-lg">
                 <div v-for="(e_playlist, index2) in user_playlists" :key="index2">
                     <div class="card card-styling mt-3 border-0" :class="e_playlist.to_add ? 'bg-selected text-white' : '' " @click="e_playlist.to_add = !e_playlist.to_add">
                         <div class="row g-0">
@@ -85,6 +99,8 @@ export default {
             songs_to_sort: {},
             del_modal: null,
             prev_track_id: null,
+            total_num_songs: 0,
+            num_songs_sorted: 0,
         };
     },
     computed: {
@@ -135,6 +151,13 @@ export default {
             }
             
             return [...all_genres]
+        },
+        perc_songs_sorted() {
+            if (this.total_num_songs === 0) {
+                return 0
+            }
+
+            return Math.round((this.num_songs_sorted / this.total_num_songs) * 100)
         }
     },
     methods: {
@@ -146,18 +169,24 @@ export default {
         async updateSongsToSort(limit=50) {
             var all_user_songs = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/songs_selected`)
             var sorted_songs = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/sorted_songs`)
+
             
             if (sorted_songs === "" || sorted_songs === null) {
                 sorted_songs = {}
             }
+
+            this.total_num_songs = Object.keys(all_user_songs).length
+            this.num_songs_sorted = Object.keys(sorted_songs).length
 
             for (let song_id in all_user_songs) {
                 let e_song = all_user_songs[song_id]
 
                 if (sorted_songs.hasOwnProperty(song_id)) {
                     //check if all playlists accounted for already
-                    for (let e_new_pl in this.user_playlists) {
-                        if (sorted_songs[song_id].hasOwnProperty(e_new_pl)) {
+                    for (let e_pl_id in this.user_playlists) {
+                        let e_new_pl_id = this.user_playlists[e_pl_id].id
+
+                        if (sorted_songs[song_id].hasOwnProperty(e_new_pl_id)) {
                             continue
                         } else {
                             e_song['id'] = song_id
@@ -182,6 +211,8 @@ export default {
             }
         },
         async loadRandomTrack() {
+            this.curr_track = null
+
             var all_song_ids = Object.keys(this.songs_to_sort)
             var random_song_id = all_song_ids[Math.floor(Math.random() * all_song_ids.length)]
 
@@ -224,14 +255,21 @@ export default {
 
             // push to firebase
             firebase.writeDb(`${localStorage.getItem('spotifyUserId')}/sorted_songs/${this.curr_track.id}`, song_data)
+            this.num_songs_sorted += 1
 
             // remove from songs_to_sort
             delete this.songs_to_sort[this.curr_track.id]
+
+            // check if any songs left
+            if (Object.keys(this.songs_to_sort).length === 0) {
+                await this.updateSongsToSort(50)
+            }
 
             // load new track
             await this.loadRandomTrack()
 
             // Load the new track URI
+            console.log(this.curr_track.name, "wpppp")
             window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
 
             // reset playlist selection
@@ -271,6 +309,8 @@ export default {
         async loadPrevTrack() {
             // load previous track
             await this.loadNewTrack(this.prev_track_id)
+
+            this.num_songs_sorted -= 1
 
             // Load the new track URI
             window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
@@ -374,13 +414,21 @@ export default {
         position: fixed;
         bottom: 0;
         right: 0;
+        z-index: 1021;
     }
     .btn-stay-there-2 {
         position: fixed;
         bottom: 0;
         left: 0;
+        z-index: 1021;
     }
     .padding-lg {
         padding-bottom: 125px;
+    }
+    .vh-100 {
+        height: 100vh;
+    }
+    .bg-progress-custom {
+        background-color: #ade9c3;
     }
 </style>
