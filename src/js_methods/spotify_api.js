@@ -103,6 +103,14 @@ export const SpotifyApiUtils = {
     async updateAccessToken() {
         // Update the access token if it is expired, else do nothing
 
+        // If user logged out, redirect to home page
+        if (localStorage.getItem('userLoggedOut')) {
+            localStorage.removeItem('userLoggedOut')
+
+            window.location.href = '/';
+            return
+        }
+
         if (localStorage.getItem('accessToken')) {
             const accessTokenTime = localStorage.getItem('accessTokenTime');
             const currentTime = Date.now();

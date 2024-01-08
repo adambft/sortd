@@ -269,7 +269,6 @@ export default {
             await this.loadRandomTrack()
 
             // Load the new track URI
-            console.log(this.curr_track.name, "wpppp")
             window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
 
             // reset playlist selection
@@ -336,6 +335,10 @@ export default {
         }
     },
     async mounted() {
+        if (window.onSpotifyIframeApiReady) {
+            window.location.reload();
+        }
+
         this.del_modal = new bootstrap.Modal(document.getElementById('delModal'), {
             keyboard: false
         })

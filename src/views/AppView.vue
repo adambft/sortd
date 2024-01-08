@@ -1,12 +1,7 @@
 <template>
-  <div class="main">
-    <div>
-      <h1>Welcome to The App</h1>
-      <p>{{ local_storage_shit }}</p>
-      <button @click="getplaylists" class="btn btn-warning">Get All Playlists</button>
-      <button @click="getspotifyid" class="btn btn-warning">Get Spotify ID</button>
-      <button @click="this.$router.push({ path: '/app/playlist_select' })" class="btn btn-warning">Go to Song Selection</button>
-    </div>
+  <div class="main h-100 d-flex justify-content-center align-items-center">
+      <h3 v-if="!error_msg"><font-awesome-icon icon="fa-solid fa-spinner" class="fa-spin-pulse me-3" />Loading App, Hang Tight</h3>
+      <h3 v-else>{{ error_msg }}</h3>
   </div>
 </template>
 
@@ -18,29 +13,32 @@ import * as firebase from '../js_methods/firebase'
 export default {
   data() {
     return {
-      local_storage_shit: "",
+      error_msg: null,
     };
   },
   methods: {
-    async getplaylists() {
-      SpotifyApiUtils.getAllPlaylists()
-    },
 
-    async getspotifyid() {
-
-    }
   },
   async mounted() {
-    this.local_storage_shit = JSON.stringify(localStorage);
-
+    this.error_msg = null
     await SpotifyApiUtils.updateAccessToken()
+
+    // check user data in firebase
+    var user_data = await firebase.readDb(`/${localStorage.getItem('spotifyUserId')}`)
+    console.log('user_data: ', user_data)
+
+    if (!user_data.hasOwnProperty('curr_playlists') || !user_data.hasOwnProperty('songs_selected')) {
+      this.$router.push({ path: 'app/playlist_select' })
+    } else if (!user_data.hasOwnProperty('new_playlists')) {
+      this.$router.push({ path: 'app/playlist_create' })
+    } else {
+      this.$router.push({ path: 'app/sort' })
+    }
+
+    this.error_msg = 'Error in loading app. Please try refreshing page.'
   }
 };
 </script>
 
 <style scoped>
-.main {
-  padding: 1.2rem;
-  background-color: #c6ffdc;
-}
 </style>

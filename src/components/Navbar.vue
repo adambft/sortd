@@ -77,6 +77,7 @@ export default {
             localStorage.removeItem('codeVerifier');
             localStorage.removeItem('spotifyUserId');
 
+            localStorage.setItem('userLoggedOut', true)
             window.location.reload();
         },
     }
