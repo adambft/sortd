@@ -20,7 +20,7 @@
 
             <div class="col-auto">
                 <button 
-                    class="btn btn-sm btn-success rounded-3"
+                    class="btn btn-sm btn-secondary rounded-3"
                     data-bs-toggle="popover"
                     data-bs-trigger="hover"
                     data-bs-html="true"
@@ -399,12 +399,29 @@ export default {
 
                 await SpotifyApiUtils.addTracksToPlaylist(e_pl_id, e_song_ids)
             }
-        }
+        },
+        handleSpacebar(e) {
+            // prevent default behaviour
+            e.preventDefault();
+
+            // toggle player
+            if (window.EmbedController) {
+                window.EmbedController.togglePlay();
+            }
+
+            return
+        },
     },
     async mounted() {
         if (window.onSpotifyIframeApiReady) {
             window.location.reload();
         }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                this.handleSpacebar(e)
+            }
+        })
 
         this.del_modal = new bootstrap.Modal(document.getElementById('delModal'), {
             keyboard: false
