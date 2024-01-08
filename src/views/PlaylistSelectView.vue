@@ -4,9 +4,19 @@
             <div class="bg-light-green p-2"></div>
             <div class="p-3 mb-3 mx-2 rounded-4 bg-dark-green text-white">
                 <div class="d-flex align-self-start mb-2">
-                    <h1 class="d-inline-block me-5">Song Selection</h1>
-                    <p class="d-inline-block mt-2">{{ playlists_selected }}/ {{ user_playlists.length }} selected</p>
-                    <p class="mt-2 ms-3 error-msg" :class="show_error ? '' : 'opacity-0' ">
+                    <span 
+                        class="me-3 ms-2 d-flex align-items-center pb-2"
+                        data-bs-toggle="popover"
+                        data-bs-trigger="hover"
+                        data-bs-html="true"
+                        data-bs-content="Select the playlists that contain the songs you want to organize.<br/><br/>Don't worry about duplicate songs, we'll take care of that for you."
+                        ><font-awesome-icon icon="fa-solid fa-circle-question" class="fa-lg" />
+                    </span>
+                    <h1 class="d-inline-block me-5">
+                        Song Selection
+                    </h1>
+                    <p class="d-inline-block mt-3">{{ playlists_selected }}/ {{ user_playlists.length }} selected</p>
+                    <p class="mt-3 ms-3 error-msg" :class="show_error ? '' : 'opacity-0' ">
                         <span class="badge rounded-pill text-bg-danger py-2 px-3">No playlists added yet</span>
                     </p>
                 </div>
@@ -22,7 +32,7 @@
         </div>
         
         <div class="container-fluid">
-            <div class="row">
+            <div class="row" v-if="user_playlists.length > 0">
                 <div v-for="(e_playlist, index) in user_playlists" :key="index" class="col-12 col-md-6 col-lg-4">
                     <div class="card border-0 mb-3 pointer-hover card-styling position-relative" :class="e_playlist.to_add ? 'bg-selected text-white' : ''" @click="cardClicked(e_playlist)">
                         <div class="row g-0">
@@ -42,6 +52,10 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div v-else class="row text-center py-5">
+                <h3>No playlists in your Spotify library.<br><br>Seems like you have no songs to organize...</h3>
             </div>
         </div>
     </div>
@@ -229,7 +243,11 @@
             },
         },
         async mounted() {
-            this.user_playlists = await SpotifyApiUtils.getAllPlaylists()
+            var temp_user_playlists = await SpotifyApiUtils.getAllPlaylists()
+
+            // Filter out playlists with 0 songs
+            this.user_playlists = temp_user_playlists.filter(obj => obj.tracks.total > 0)
+
             await SpotifyApiUtils.getUserId()
 
             for (let key in this.user_playlists) {

@@ -1,9 +1,22 @@
 <template>
     <div class="container-fluid h-100">
         <div class="row p-3 pb-2">
-            <div class="progress rounded-5 p-0 bg-progress-custom position-relative" role="progressbar" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100" style="height: 20px">
-                <div class="position-absolute w-100 text-center" v-if="perc_songs_sorted < 10">{{ num_songs_sorted }}/{{ total_num_songs }} Songs Sorted</div>
-                <div class="progress-bar bg-success" :style="{width: `${perc_songs_sorted}%`}">{{ perc_songs_sorted >= 10 ? `${num_songs_sorted }/${ total_num_songs } Songs Sorted` : `` }}</div>
+            <div class="col-auto">
+                <span 
+                    class=""
+                    data-bs-toggle="popover"
+                    data-bs-trigger="hover"
+                    data-bs-html="true"
+                    data-bs-content="This is where you can start sorting your songs. <br> <br> Select the playlist(s) on the right that you want to add this song to, then click <b class='text-success'>'Save'</b> <br> <br> If you don't want to add the song to any of your playlists, click <b class='text-secondary'>'Not my jam anymore'</b>."
+                    ><font-awesome-icon icon="fa-solid fa-circle-question" class="fa-lg text-success" />
+                </span>
+            </div>
+            
+            <div class="col">
+                <div class="progress rounded-5 p-0 bg-progress-custom position-relative" role="progressbar" :aria-valuenow="perc_songs_sorted" aria-valuemin="0" aria-valuemax="100" style="height: 20px">
+                    <div class="position-absolute w-100 text-center" v-if="perc_songs_sorted < 10">{{ num_songs_sorted }}/{{ total_num_songs }} Songs Sorted</div>
+                    <div class="progress-bar bg-success" :style="{width: `${perc_songs_sorted}%`}">{{ perc_songs_sorted >= 10 ? `${num_songs_sorted }/${ total_num_songs } Songs Sorted` : `` }}</div>
+                </div>
             </div>
         </div>
 
@@ -15,15 +28,25 @@
                             <div id="embed-iframe"></div>
                         </div>
                         
-                        <span class="badge rounded-pill text-bg-success py-2 px-3 me-2 mb-3" v-for="(e_genre, index3) in all_spotify_genres" :key="index3">
-                            {{ e_genre }}
-                        </span>
+                        <div v-if="all_spotify_genres !== null && all_lastfm_genres !== null">
+                            <span 
+                                v-if="all_spotify_genres.length > 0 || all_lastfm_genres.length > 0"
+                                class="me-3 ms-2 pb-2"
+                                data-bs-toggle="popover"
+                                data-bs-trigger="hover"
+                                data-bs-html="true"
+                                data-bs-content="These are tags associated with this song. <br> <br> <b class='text-success'>Spotify Tags</b> are tags that Spotify has associated with the artist(s). <br> <br> <b class='text-primary'>LastFM Tags</b> are tags that LastFM API has associated with the song."
+                                ><font-awesome-icon icon="fa-solid fa-circle-question" class="fa-lg text-secondary" />
+                            </span>
     
-                        <br>
-    
-                        <span class="badge rounded-pill text-bg-primary py-2 px-3 me-2 mb-3" v-for="(e_genre_data, index4) in all_lastfm_genres" :key="index4">
-                            {{ e_genre_data.name }}
-                        </span>
+                            <span class="badge rounded-pill text-bg-success py-2 px-3 me-2 mb-3" v-for="(e_genre, index3) in all_spotify_genres" :key="index3">
+                                {{ e_genre }}
+                            </span>
+        
+                            <span class="badge rounded-pill text-bg-primary py-2 px-3 me-2 mb-3" v-for="(e_genre_data, index4) in all_lastfm_genres" :key="index4">
+                                {{ e_genre_data.name }}
+                            </span>
+                        </div>
                     </div>
 
                     <div :class="curr_track==null ? '' : 'd-none'" class="d-flex justify-content-center align-items-center mt-5 pt-5">

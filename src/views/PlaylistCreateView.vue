@@ -4,8 +4,19 @@
             <div class="bg-light-green p-2"></div>
             <div class="p-3 mb-3 mx-2 rounded-4 bg-dark-green text-white">
                 <div class="d-flex align-self-start mb-2">
+                    <span 
+                        class="me-3 ms-2 d-flex align-items-center pb-2"
+                        data-bs-toggle="popover"
+                        data-bs-trigger="hover"
+                        data-bs-html="true"
+                        data-bs-content="Select the brand new playlists you want to add songs to. <br><br> <b>Tip:</b> You can create new playlists by clicking the <b>Add New Playlist(s)</b> button. These playlists will be auto-created in your Spotify account."
+                        ><font-awesome-icon icon="fa-solid fa-circle-question" class="fa-lg" />
+                    </span>
                     <h1 class="d-inline-block me-5">Select New Playlists</h1>
-                    <p class="d-inline-block mt-2">{{ playlists_selected }}/ {{ curr_user_playlists.length }} selected</p>
+                    <p class="d-inline-block mt-3">{{ playlists_selected }}/ {{ curr_user_playlists.length }} selected</p>
+                    <p class="mt-3 ms-3 error-msg" :class="show_error ? '' : 'opacity-0' ">
+                        <span class="badge rounded-pill text-bg-danger py-2 px-3">No playlists added yet</span>
+                    </p>
                 </div>
     
                 <button class="btn btn-warning" @click="addAll()">Add All</button>
@@ -19,7 +30,7 @@
         </div>
         
         <div class="container-fluid">
-            <div class="row">
+            <div v-if="curr_user_playlists.length > 0" class="row">
                 <div v-for="(e_playlist, index) in curr_user_playlists" :key="index" class="col-12 col-md-6 col-lg-4">
                     <div class="card border-0 mb-3 pointer-hover card-styling position-relative" :class="e_playlist.to_add ? 'bg-selected text-white' : ''" @click="cardClicked(e_playlist)">
                         <div class="row g-0">
@@ -40,6 +51,10 @@
                     </div>
                 </div>
             </div>
+
+            <div v-else class="row text-center py-5">
+                <h3>No empty playlists in your Spotify library.<br><br>Click "Add New Playlist(s)" above to get started.</h3>
+            </div>
         </div>
     </div>
 
@@ -47,8 +62,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title d-inline">Add New Playlists</h5>
-                    <span class="badge rounded-pill text-bg-danger py-2 px-3 ms-3 add-pl-err" :class="add_pl_error_msg=='' ? 'opacity-0' : ''"> {{ add_pl_error_msg }} </span>
+                    <h5 class="modal-title">Add New Playlists to Your Spotify Account</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
@@ -75,6 +89,7 @@
                 </div>
 
                 <div class="modal-footer">
+                    <span class="badge rounded-pill text-bg-danger py-2 px-3 add-pl-err me-auto" :class="add_pl_error_msg=='' ? 'opacity-0' : ''"> {{ add_pl_error_msg }} </span>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-success" @click="save_new_pl()">Save changes</button>
                 </div>
@@ -95,12 +110,14 @@
                 curr_sort: "",
                 add_playlist_modal: null,
                 add_pl_error_msg: "",
+                error_msg: "",
                 new_playlists: [
                     {
                         name: "",
                         description: "",
                     }
-                ]
+                ],
+                show_error: false,
             };
         },
         computed: {
@@ -188,7 +205,7 @@
                     var e_new_pl = this.new_playlists[i]
 
                     if (e_new_pl.name.trim() == "") {
-                        this.add_pl_error_msg = "All new playlists must have a name"
+                        this.add_pl_error_msg = "All new playlists must have a name!"
 
                         // Remove error message after 3 seconds
                         setTimeout(() => {
@@ -224,6 +241,18 @@
                     if (e_playlist.to_add) {
                         new_pl.push(e_playlist)
                     }
+                }
+
+                // check if new_pl is empty
+                if (new_pl.length == 0) {
+                    this.show_error = true
+
+                    // Remove error message after 3 seconds
+                    setTimeout(() => {
+                        this.show_error = false
+                    }, 3000);
+                    
+                    return
                 }
 
                 await firebase.writeDb(`${localStorage.getItem('spotifyUserId')}/new_playlists`, new_pl)

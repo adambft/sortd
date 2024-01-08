@@ -5,3 +5,7 @@
 #app {
   font-family: 'Quicksand', sans-serif;
 }
+
+.dropdown-menu {
+  z-index: 1021 !important;
+}

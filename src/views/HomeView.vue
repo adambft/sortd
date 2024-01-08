@@ -1,10 +1,10 @@
 <template>
   <div class="container-fluid px-0">
-    <div class="row" id="main-top-part">
-      <div class="col-5 p-0">
-        <img src="../assets/home_title_img.jpg" id="title-img">
+    <div class="row bg-trans" id="main-top-part">
+      <div class="col-5 p-5">
+        <img src="../assets/home_title_img.jpg" id="title-img" class="rounded-4">
       </div>
-      <div class="col-7 px-4 d-flex flex-column justify-content-center bg-trans">
+      <div class="col-7 px-4 d-flex flex-column justify-content-center">
         <h1>"I should probably organise my Spotify playlists"</h1>
         <p class="mt-4">How many times have you said that to yourself over the past 500 years but never actually got to it cos you're a lazy goddamn piece of sh.?</p>
         <p>Well, now you can find your motivation with our patented* Spotify playlist organiser technology.</p>
