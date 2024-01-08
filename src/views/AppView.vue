@@ -1,5 +1,5 @@
 <template>
-  <div class="main h-100 d-flex justify-content-center align-items-center">
+  <div class="h-100 d-flex justify-content-center align-items-center">
       <h3 v-if="!error_msg"><font-awesome-icon icon="fa-solid fa-spinner" class="fa-spin-pulse me-3" />Loading App, Hang Tight</h3>
       <h3 v-else>{{ error_msg }}</h3>
   </div>
@@ -15,9 +15,6 @@ export default {
     return {
       error_msg: null,
     };
-  },
-  methods: {
-
   },
   async mounted() {
     this.error_msg = null
@@ -39,6 +36,3 @@ export default {
   }
 };
 </script>
-
-<style scoped>
-</style>

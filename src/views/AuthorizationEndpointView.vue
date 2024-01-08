@@ -1,9 +1,7 @@
 <template>
-    <h1>Authorization Page</h1>
-    <hr>
-    <p>{{ local_storage_shit }}</p>
-    <hr>
-    <p>{{ error_msg }}</p>
+      <div class="h-100 d-flex justify-content-center align-items-center">
+      <h3><font-awesome-icon icon="fa-solid fa-spinner" class="fa-spin-pulse me-3" />Authorizing access</h3>
+  </div>
 </template>
 
 
@@ -11,16 +9,7 @@
 import { SpotifyApiUtils } from '../js_methods/spotify_api'
 
 export default {
-    data() {
-        return {
-            local_storage_shit: "",
-            error_msg: "",
-        };
-    },
-
     async mounted() {
-        this.local_storage_shit = JSON.stringify(localStorage);
-
         try {
             var authCode = SpotifyApiUtils.getUrlAuthCode()
     
@@ -38,8 +27,3 @@ export default {
     }
 };
 </script>
-
-
-<style scoped>
-
-</style>
