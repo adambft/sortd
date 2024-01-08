@@ -1,5 +1,5 @@
 <template>
-  <div class="container-fluid pb-5 px-0">
+  <div class="container-fluid px-0">
     <div class="row" id="main-top-part">
       <div class="col-5 p-0">
         <img src="../assets/home_title_img.jpg" id="title-img">
@@ -17,7 +17,7 @@
     </div>
 
     <div class="row d-flex justify-content-center align-items-center mt-4">
-      <div class="card rounded-3 text-center border-0" style="width: 18rem;">
+      <div class="card rounded-3 text-center border-0" style="width: 16rem;">
         <div class="card-body">
           <h5 class="card-title">Step 1</h5>
           <p class="card-text"><font-awesome-icon icon="fa-solid fa-music" class="me-2" />Pick your songs to sort</p>
@@ -26,16 +26,16 @@
 
       <font-awesome-icon icon="fa-solid fa-arrow-right" class="w-auto" />
 
-      <div class="card rounded-3 text-center border-0" style="width: 18rem;">
+      <div class="card rounded-3 text-center border-0" style="width: 16rem;">
         <div class="card-body">
           <h5 class="card-title">Step 2</h5>
-          <p class="card-text"><font-awesome-icon icon="fa-solid fa-list-ul" class="me-2" />Select your new playlists</p>
+          <p class="card-text"><font-awesome-icon icon="fa-solid fa-list-ul" class="me-2" />Select new playlists</p>
         </div>
       </div>
 
       <font-awesome-icon icon="fa-solid fa-arrow-right" class="w-auto" />
 
-      <div class="card rounded-3 text-center border-0" style="width: 18rem;">
+      <div class="card rounded-3 text-center border-0" style="width: 16rem;">
         <div class="card-body">
           <h5 class="card-title">Step 3</h5>
           <p class="card-text"><font-awesome-icon icon="fa-solid fa-hand-pointer" class="me-2" />Start sorting</p>
@@ -44,7 +44,7 @@
 
       <font-awesome-icon icon="fa-solid fa-arrow-right" class="w-auto" />
 
-      <div class="card rounded-3 text-center border-0" style="width: 18rem;">
+      <div class="card rounded-3 text-center border-0" style="width: 16rem;">
         <div class="card-body">
           <h5 class="card-title">Step 4</h5>
           <p class="card-text"><font-awesome-icon icon="fa-brands fa-spotify" class="me-2" />Export to Spotify</p>
@@ -52,7 +52,7 @@
       </div>
     </div>
 
-    <div class="row justify-content-center bg-trans mt-5 py-3">
+    <div class="row justify-content-center bg-trans mt-5 py-3 pb-5">
       <h3 class="text-center">What are you waiting for?</h3>
 
       <div class="w-auto">

@@ -143,6 +143,9 @@ export const SpotifyApiUtils = {
                 // create new user account
                 await firebase.writeDb(`${user_spotify_id}`, '')
             }
+
+            // reload to force navbar to update
+            window.location.reload();
         }
     },
     

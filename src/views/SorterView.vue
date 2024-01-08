@@ -9,7 +9,7 @@
 
         <div class="row h-100">
             <div class="col-6">
-                <div class="sticky-top pt-3 vh-100">
+                <div class="sticky-top pt-3">
                     <div :class="curr_track==null ? 'd-none' : ''" class="text-start">
                         <div class="mb-3">
                             <div id="embed-iframe"></div>
@@ -26,7 +26,7 @@
                         </span>
                     </div>
 
-                    <div :class="curr_track==null ? '' : 'd-none'" class="d-flex justify-content-center vh-100 align-items-center">
+                    <div :class="curr_track==null ? '' : 'd-none'" class="d-flex justify-content-center align-items-center mt-5 pt-5">
                         <div class="w-100">
                             <font-awesome-icon icon="fa-solid fa-spinner" class="fa-spin-pulse fa-4x text-success w-100" />
                             <h3 class="text-center mt-4 text-success">Loading song</h3>
@@ -424,9 +424,6 @@ export default {
     }
     .padding-lg {
         padding-bottom: 125px;
-    }
-    .vh-100 {
-        height: 100vh;
     }
     .bg-progress-custom {
         background-color: #ade9c3;

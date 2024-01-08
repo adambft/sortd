@@ -7,10 +7,10 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 /* import specific icons */
-import { faArrowRight, faHandPointer, faListUl, faMusic, faSpinner } from '@fortawesome/free-solid-svg-icons'
+import { faArrowRight, faHandPointer, faListUl, faMusic, faSpinner, faUserCircle } from '@fortawesome/free-solid-svg-icons'
 
 /* add icons to the library (ADD NEW ICONS HERE v) */
-library.add(faSpinner, faArrowRight, faMusic, faListUl, faHandPointer, faSpotify)
+library.add(faSpinner, faArrowRight, faMusic, faListUl, faHandPointer, faSpotify, faUserCircle)
 
 import "bootstrap/dist/css/bootstrap.min.css"
 import "bootstrap"
