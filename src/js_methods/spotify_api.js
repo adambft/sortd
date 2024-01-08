@@ -193,7 +193,7 @@ export const SpotifyApiUtils = {
             return code
         } else if (urlParams.has('error')) {
             let error = urlParams.get('error')
-            console.log('Error in running getUrlAuthCode(): ', error)
+            console.error('Error in running getUrlAuthCode(): ', error)
             
             throw error
         } else {
@@ -291,8 +291,8 @@ export const SpotifyApiUtils = {
         }
     },
 
-    async getPlaylistTracks(playlist_id, num_tracks = 50, offset = 0) {
-        // Get all tracks of a playlist
+    async getPlaylistTracks(playlist_id, num_tracks = 50, offset = 0, return_all_data = false) {
+        // Get tracks of a playlist
 
         await this.updateAccessToken();
 
@@ -303,13 +303,49 @@ export const SpotifyApiUtils = {
                 }
             });
 
-            var tracks = response.data.items;
-
-            return tracks;
+            if (return_all_data) {
+                return response.data;
+            } else {
+                return response.data.items;
+            }
         } catch (error) {
             console.error("Error in running getPlaylistTracks(): ", error);
             throw error;
         }
+    },
+
+    async getAllPlaylistTrackIds(playlist_id) {
+        var res_tracks = new Set();
+        var offset = 0;
+        var num_tracks = 50;
+        var tracks_gotten = 0;
+
+        // first iteration (get first 50)
+        var tracks_data = await this.getPlaylistTracks(playlist_id, num_tracks, offset, true);
+
+        var tracks = tracks_data.items;
+        var total_tracks = tracks_data.total;
+
+        // add only the track's id to the result
+        tracks.forEach(element => {
+            res_tracks.add(element.track.id);
+        });
+
+        offset += num_tracks;
+        tracks_gotten += tracks.length;
+        
+        while (tracks_gotten < total_tracks) {
+            var tracks = await this.getPlaylistTracks(playlist_id, num_tracks, offset);
+
+            tracks.forEach(element => {
+                res_tracks.add(element.track.id);
+            });
+
+            offset += num_tracks;
+            tracks_gotten += tracks.length;
+        }
+
+        return res_tracks;
     },
 
     async getTracksAudioFeatures(track_ids) {
@@ -499,7 +535,7 @@ export const SpotifyApiUtils = {
         // Transfer playback to browser
 
         if (!localStorage.getItem('spotifyDeviceId')) {
-            console.log("No spotify device id");
+            console.error("No spotify device id");
 
             return false;
         }
@@ -525,8 +561,6 @@ export const SpotifyApiUtils = {
 
     async queueTrack(track_id) {
         // Queue a track
-
-        console.log("Queueing track: ", track_id)
 
         await this.updateAccessToken();
 
@@ -567,11 +601,62 @@ export const SpotifyApiUtils = {
             });
 
             var playback_state = response.data;
-            console.log("playback_state: ", playback_state);
             return playback_state;
         } catch (error) {
             console.error("Error in running getPlaybackState(): ", error);
             throw error;
         }
-    }
+    },
+
+    async add100TracksToPlaylist(playlist_id, track_ids_arr) {
+        // Add tracks to playlist (max 100 tracks per request)
+
+        await this.updateAccessToken();
+
+        var all_tracks_arr = [];
+
+        for (var i = 0; i < track_ids_arr.length; i++) {
+            var e_track_id = track_ids_arr[i];
+
+            all_tracks_arr.push(`spotify:track:${e_track_id}`);
+        }
+
+        try {
+            const response = await axios.post(`https://api.spotify.com/v1/playlists/${playlist_id}/tracks`, {
+                uris: all_tracks_arr,
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+            });
+
+            return true;
+        } catch (error) {
+            console.error("Error in running addTracksToPlaylist(): ", error);
+            throw error;
+        }
+    },
+
+    async addTracksToPlaylist(playlist_id, track_ids_arr) {
+        // Add all tracks to playlist, ensure no duplicates
+
+        await this.updateAccessToken();
+
+        var offset = 0;
+        var num_tracks = 100;
+        var playlist_existing_tracks = await this.getAllPlaylistTrackIds(playlist_id);
+
+        // Remove tracks that already exist in the playlist
+        track_ids_arr = track_ids_arr.filter(e_id => !playlist_existing_tracks.has(e_id));
+
+        while (offset < track_ids_arr.length) {
+            var tracks_to_add = track_ids_arr.slice(offset, offset + num_tracks);
+
+            await this.add100TracksToPlaylist(playlist_id, tracks_to_add);
+
+            offset += num_tracks;
+        }
+
+        return true;
+    },
 }

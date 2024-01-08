@@ -5,6 +5,7 @@ import AccountAuthorizeView from '../views/AuthorizationEndpointView.vue'
 import PlaylistSelectView from '../views/PlaylistSelectView.vue'
 import PlaylistCreateView from '../views/PlaylistCreateView.vue'
 import SorterView from '../views/SorterView.vue'
+import TestView from '../views/TestView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -38,6 +39,11 @@ const router = createRouter({
       path: '/app/sort',
       name: 'sorter',
       component: SorterView,
+    },
+    {
+      path: '/test',
+      name: 'test',
+      component: TestView,
     },
   ]
 })

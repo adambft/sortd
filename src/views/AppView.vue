@@ -22,7 +22,6 @@ export default {
 
     // check user data in firebase
     var user_data = await firebase.readDb(`/${localStorage.getItem('spotifyUserId')}`)
-    console.log('user_data: ', user_data)
 
     if (!user_data.hasOwnProperty('curr_playlists') || !user_data.hasOwnProperty('songs_selected')) {
       this.$router.push({ path: 'app/playlist_select' })

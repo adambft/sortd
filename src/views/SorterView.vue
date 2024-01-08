@@ -3,7 +3,6 @@
         <div class="row p-3 pb-2">
             <div class="col-auto">
                 <span 
-                    class=""
                     data-bs-toggle="popover"
                     data-bs-trigger="hover"
                     data-bs-html="true"
@@ -17,6 +16,19 @@
                     <div class="position-absolute w-100 text-center" v-if="perc_songs_sorted < 10">{{ num_songs_sorted }}/{{ total_num_songs }} Songs Sorted</div>
                     <div class="progress-bar bg-success" :style="{width: `${perc_songs_sorted}%`}">{{ perc_songs_sorted >= 10 ? `${num_songs_sorted }/${ total_num_songs } Songs Sorted` : `` }}</div>
                 </div>
+            </div>
+
+            <div class="col-auto">
+                <button 
+                    class="btn btn-sm btn-success rounded-3"
+                    data-bs-toggle="popover"
+                    data-bs-trigger="hover"
+                    data-bs-html="true"
+                    data-bs-content="Click here to update your Spotify playlists with your sorted songs."
+                    @click="pushSortedSongsToSpotify()"
+                >
+                    <font-awesome-icon icon="fa-solid fa-floppy-disk" class="fa-lg" />
+                </button>
             </div>
         </div>
 
@@ -355,6 +367,38 @@ export default {
             }
 
             this.prev_track_id = null
+        },
+        async pushSortedSongsToSpotify() {
+            // push sorted songs to spotify playlists
+
+            var sorted_songs = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/sorted_songs`)
+
+            var songs_by_playlist = {}
+
+            // add each userplaylist to songs_by_playlist
+            for (let i = 0; i < this.user_playlists.length; i++) {
+                let e_pl_id = this.user_playlists[i].id
+
+                songs_by_playlist[e_pl_id] = []
+            }
+            
+            // add each song to the playlist
+            for (let song_id in sorted_songs) {
+                let e_song_data = sorted_songs[song_id]
+                
+                for (let e_pl_id in songs_by_playlist) {
+                    if (e_song_data[e_pl_id]) {
+                        songs_by_playlist[e_pl_id].push(song_id)
+                    }
+                }
+            }
+            
+            // push data to spotify
+            for (let e_pl_id in songs_by_playlist) {
+                let e_song_ids = songs_by_playlist[e_pl_id]
+
+                await SpotifyApiUtils.addTracksToPlaylist(e_pl_id, e_song_ids)
+            }
         }
     },
     async mounted() {
