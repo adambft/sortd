@@ -22,7 +22,7 @@ import { RouterLink } from 'vue-router'
                     </li>
 
                     <li class="nav-item lh-lg">
-                        <RouterLink to="/account" class="navbar-item" :class="{ 'router-link-active': $route.path.startsWith('/app') }">App</RouterLink>
+                        <RouterLink to="/app" class="navbar-item" :class="{ 'router-link-active': $route.path.startsWith('/app') }">App</RouterLink>
                     </li>
 
                     <li class="nav-item dropdown" v-if="userLoggedIn">
