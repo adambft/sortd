@@ -20,6 +20,8 @@ const base64encode = (input) => {
         .replace(/\+/g, '-')
         .replace(/\//g, '_');
 }
+
+const redirectUri = 'https://adambft-spotify-playlist-sorter.vercel.app/account_authorize';
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[end]
 
 
@@ -81,7 +83,7 @@ export const SpotifyApiUtils = {
                 client_id: import.meta.env.VITE_SPOTIFY_CLIENT_ID,
                 grant_type: 'authorization_code',
                 code,
-                redirect_uri: 'http://localhost:5173/account_authorize',
+                redirect_uri: redirectUri,
                 code_verifier: codeVerifier,
             }, {
                 headers: {
@@ -163,7 +165,6 @@ export const SpotifyApiUtils = {
         const codeChallenge = base64encode(hashed);
         
         const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
-        const redirectUri = 'http://localhost:5173/account_authorize';
         
         const scope = 'user-read-private user-read-email playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private user-read-playback-state user-modify-playback-state user-read-currently-playing app-remote-control streaming'; // Check out other scopes here: https://developer.spotify.com/documentation/web-api/concepts/scopes
         const authUrl = new URL("https://accounts.spotify.com/authorize")
