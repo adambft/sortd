@@ -25,7 +25,7 @@
                     data-bs-trigger="hover"
                     data-bs-html="true"
                     data-bs-content="Click here to update your Spotify playlists with your sorted songs."
-                    @click="pushSortedSongsToSpotify()"
+                    @click="openSaveConfirmationModal()"
                 >
                     <font-awesome-icon icon="fa-solid fa-floppy-disk" class="fa-lg" />
                 </button>
@@ -95,7 +95,8 @@
             </div>
         </div>
 
-        <div class="modal" tabindex="-1" id="delModal">
+        <!-- delete confirmation modal -->
+        <div class="modal fade" tabindex="-1" id="delModal">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -110,6 +111,46 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="button" class="btn btn-danger" @click="confirmDelete()" data-bs-dismiss="modal">Confirm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- save confirmation modal -->
+    <div class="modal fade" tabindex="-1" id="saveConfirmation">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm export to your Spotify playlists?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <p>Exporting your songs to Spotify may take awhile.</p>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" @click="pushSortedSongsToSpotify()">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- export progress modal -->
+    <div class="modal fade" tabindex="-1" id="exportProgress" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Exporting to Spotify...</h5>
+                </div>
+
+                <div class="modal-body">
+                    <div v-for="(e_pl, index5) in user_playlists" class="mb-2 ms-3">
+                        <font-awesome-icon icon="fa-solid fa-spinner" class="fa-spin-pulse me-3" v-if="!playlists_pushed.includes(e_pl.id)" />
+                        <font-awesome-icon icon="fa-solid fa-circle-check" class="me-3 text-success" v-else />
+                        {{ e_pl.name }}
                     </div>
                 </div>
             </div>
@@ -136,6 +177,9 @@ export default {
             prev_track_id: null,
             total_num_songs: 0,
             num_songs_sorted: 0,
+            save_confirm_modal: null,
+            playlists_pushed: [],
+            export_progress_modal: null,
         };
     },
     computed: {
@@ -326,6 +370,10 @@ export default {
             // Check if user really doesnt want this song added
             this.del_modal.show()
         },
+        openSaveConfirmationModal() {
+            // Check if user really wants to save
+            this.save_confirm_modal.show()
+        },
         async checkPlaylistBeforeSave () {
             // check if any playlist is selected
             for (let i = 0; i < this.user_playlists.length; i++) {
@@ -371,6 +419,12 @@ export default {
         async pushSortedSongsToSpotify() {
             // push sorted songs to spotify playlists
 
+            this.save_confirm_modal.hide()
+            this.export_progress_modal.show()
+
+            // wait 1 second to ensure modal is shown
+            await new Promise(r => setTimeout(r, 1000));
+
             var sorted_songs = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/sorted_songs`)
 
             var songs_by_playlist = {}
@@ -395,10 +449,16 @@ export default {
             
             // push data to spotify
             for (let e_pl_id in songs_by_playlist) {
+                
                 let e_song_ids = songs_by_playlist[e_pl_id]
 
                 await SpotifyApiUtils.addTracksToPlaylist(e_pl_id, e_song_ids)
+                this.playlists_pushed.push(e_pl_id)
             }
+
+            await new Promise(r => setTimeout(r, 1000));
+            this.export_progress_modal.hide()
+            this.playlists_pushed = []
         },
         handleSpacebar(e) {
             // prevent default behaviour
@@ -411,6 +471,13 @@ export default {
 
             return
         },
+        openExportProgressModal(close=false) {
+            if (close) {
+                this.export_progress_modal.hide()
+            } else {
+                this.export_progress_modal.show()
+            }
+        }
     },
     async mounted() {
         if (window.onSpotifyIframeApiReady) {
@@ -424,6 +491,14 @@ export default {
         })
 
         this.del_modal = new bootstrap.Modal(document.getElementById('delModal'), {
+            keyboard: false
+        })
+
+        this.save_confirm_modal = new bootstrap.Modal(document.getElementById('saveConfirmation'), {
+            keyboard: false
+        })
+
+        this.export_progress_modal = new bootstrap.Modal(document.getElementById('exportProgress'), {
             keyboard: false
         })
 

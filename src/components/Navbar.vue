@@ -31,7 +31,7 @@ import { RouterLink } from 'vue-router'
                         </a>
 
                         <ul class="dropdown-menu dropdown-menu-end border-0">
-                            <li><a class="dropdown-item" href="#">Action</a></li>
+                            <li><RouterLink to="/account" class="dropdown-item">Account</RouterLink></li>
                             <li><a class="dropdown-item" href="#">Another action</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" @click="logUserOut()">Log Out</a></li>
@@ -78,7 +78,7 @@ export default {
             localStorage.removeItem('spotifyUserId');
 
             localStorage.setItem('userLoggedOut', true)
-            window.location.reload();
+            this.$router.push({ path: '/' })
         },
     }
 }

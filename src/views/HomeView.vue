@@ -63,14 +63,16 @@
 </template>
 
 <script>
-  import * as firebase from '../js_methods/firebase'
-
   export default {
     data() {
       return {
       };
     },
     async mounted() {
+      if (localStorage.getItem('userLoggedOut')) {
+        localStorage.removeItem('userLoggedOut')
+        window.location.reload();
+      }
     },
     methods: {
       goToApp() {

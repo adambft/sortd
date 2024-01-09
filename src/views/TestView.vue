@@ -1,9 +1,10 @@
 <template>
     <h1>Hello fucker</h1>
-    <button @click="add()">Add</button>
-    <button @click="get50tracks()">See playlist tracks (first 50)</button>
-    <button @click="getAllPlTracks()">Get all playlist tracks</button>
-    <button @click="getoneplaylist()">Get one playlist item</button>
+    <button class="btn btn-primary me-3" @click="add()">Add</button>
+    <button class="btn btn-primary me-3" @click="get50tracks()">See playlist tracks (first 50)</button>
+    <button class="btn btn-primary me-3" @click="getAllPlTracks()">Get all playlist tracks</button>
+    <button class="btn btn-primary me-3" @click="getoneplaylist()">Get one playlist item</button>
+    <button class="btn btn-primary me-3" @click='getsorted()'>Get sorted songs</button>
 </template>
 
 <script>
@@ -36,7 +37,11 @@ export default {
         async getoneplaylist() {
             var x = await SpotifyApiUtils.getOnePlaylist("7pbVe4a4BV972a6b50pk6A")
             console.log("Playlist data: ", x)
-        }
+        },
+        async getsorted() {
+            var x = await firebase.readDb(`/${localStorage.getItem('spotifyUserId')}/sorted_songs`)
+            console.log("Sorted songs: ", x)
+        },
     },
     async mounted() {
         // console.log(await SpotifyApiUtils.getAllPlaylists())
