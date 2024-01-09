@@ -33,7 +33,7 @@
         </div>
 
         <div class="row h-100">
-            <div class="col-6">
+            <div class="col-md-6 col-12">
                 <div class="sticky-top pt-3">
                     <div :class="curr_track==null ? 'd-none' : ''" class="text-start">
                         <div class="mb-3">
@@ -70,7 +70,7 @@
                 </div>
             </div>
 
-            <div class="col-6 padding-lg">
+            <div class="col-md-6 col-12 padding-lg">
                 <div v-for="(e_playlist, index2) in user_playlists" :key="index2">
                     <div class="card card-styling mt-3 border-0" :class="e_playlist.to_add ? 'bg-selected text-white' : '' " @click="e_playlist.to_add = !e_playlist.to_add">
                         <div class="row g-0">
@@ -88,6 +88,10 @@
 
                 <div class="d-flex justify-content-center">
                     <button class="btn btn-secondary btn-sm mt-4 fw-bold rounded-5 px-3" @click="openDelConfirmationModal()">Not my jam anymore</button>
+                </div>
+
+                <div class="d-flex justify-content-center my-2">
+                    <button class="btn btn-sm btn-clear mt-4 fw-bold rounded-5 px-3" @click="openNewPlaylistModal()"><font-awesome-icon icon="fa-solid fa-circle-plus" class="me-2" />Add New Playlist</button>
                 </div>
 
                 <button class="btn btn-success btn-lg m-5 btn-stay-there" @click="checkPlaylistBeforeSave()">Save</button>
@@ -156,6 +160,45 @@
             </div>
         </div>
     </div>
+
+    <!-- create new playlist modal -->
+    <div class="modal fade" tabindex="-1" id="addPlaylistModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Playlists to Your Spotify Account</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div v-for="(e_new_pl, index2) in new_playlists" class="mb-5" :key="index2">
+                        <div class="mb-3">
+                            <h5 class="d-inline">Playlist {{ index2+1 }}</h5>
+                            <span class="badge rounded-pill text-bg-secondary ms-3 del-button" @click="remove_playlist(index2)" :class="new_playlists.length>1 ? '': 'd-none'">Delete</span>
+                        </div>
+
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" :id="`name-${index2}`" placeholder="" v-model="e_new_pl.name">
+                            <label :for="`name-${index2}`">Name</label>
+                        </div>
+
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" :id="`desc-${index2}`" placeholder="" v-model="e_new_pl.description">
+                            <label :for="`desc-${index2}`">Description (optional)</label>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-warning" @click="add_playlist()">Add playlist</button>
+                </div>
+
+                <div class="modal-footer">
+                    <span class="badge rounded-pill text-bg-danger py-2 px-3 add-pl-err me-auto" :class="add_pl_error_msg=='' ? 'opacity-0' : ''"> {{ add_pl_error_msg }} </span>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success" @click="save_new_pl()">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>
 
 
@@ -180,6 +223,14 @@ export default {
             save_confirm_modal: null,
             playlists_pushed: [],
             export_progress_modal: null,
+            new_playlists: [
+                {
+                    name: "",
+                    description: "",
+                }
+            ],
+            add_pl_error_msg: "",
+            add_playlist_modal: null,
         };
     },
     computed: {
@@ -237,13 +288,29 @@ export default {
             }
 
             return Math.round((this.num_songs_sorted / this.total_num_songs) * 100)
-        }
+        },
     },
     methods: {
         async loadNewTrack(track_id) {
             this.curr_track = await SpotifyApiUtils.getOneTrack(track_id)
             this.artists_info = await SpotifyApiUtils.getArtists(this.all_artists_id_csv)
             this.all_lastfm_genres = await LastFmApiUtils.getTrackTags(this.first_artist, this.curr_track.name, 10)
+
+            // update any current playlist selections
+            var sorted_data = await firebase.readDb(`/${localStorage.getItem('spotifyUserId')}/sorted_songs/${track_id}`)
+            
+            if (sorted_data === null) {
+                return
+            }
+
+            for (let i = 0; i < this.user_playlists.length; i++) {
+                let e_playlist = this.user_playlists[i]
+                let e_pl_id = e_playlist.id
+
+                if (sorted_data.hasOwnProperty(e_pl_id)) {
+                    this.user_playlists[i].to_add = sorted_data[e_pl_id]
+                }
+            }
         },
         async updateSongsToSort(limit=50) {
             var all_user_songs = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/songs_selected`)
@@ -344,14 +411,14 @@ export default {
                 await this.updateSongsToSort(50)
             }
 
+            // reset playlist selection
+            this.resetPlaylistSelection();
+
             // load new track
             await this.loadRandomTrack()
 
             // Load the new track URI
             window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
-
-            // reset playlist selection
-            this.resetPlaylistSelection();
 
             window.EmbedController.play();
         },
@@ -389,6 +456,9 @@ export default {
             return
         },
         async loadPrevTrack() {
+            // reset playlist selection
+            this.resetPlaylistSelection();
+
             // load previous track
             await this.loadNewTrack(this.prev_track_id)
 
@@ -396,9 +466,6 @@ export default {
 
             // Load the new track URI
             window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
-
-            // reset playlist selection
-            this.resetPlaylistSelection();
 
             window.EmbedController.play();
 
@@ -461,6 +528,10 @@ export default {
             this.playlists_pushed = []
         },
         handleSpacebar(e) {
+            if (this.isNewPlModalOpen()) {
+                return
+            }
+
             // prevent default behaviour
             e.preventDefault();
 
@@ -471,13 +542,68 @@ export default {
 
             return
         },
+        isNewPlModalOpen() {
+            const modalElement = document.getElementById('addPlaylistModal');
+            return modalElement.classList.contains('show');
+        },
         openExportProgressModal(close=false) {
             if (close) {
                 this.export_progress_modal.hide()
             } else {
                 this.export_progress_modal.show()
             }
-        }
+        },
+        remove_playlist(index) {
+            this.new_playlists.splice(index, 1)
+        },
+        add_playlist() {
+            var new_pl = {
+                name: "",
+                description: "",
+            }
+
+            this.new_playlists.push(new_pl)
+        },
+        async save_new_pl() {
+            // Check if all new playlists have a name
+            for (var i = 0; i < this.new_playlists.length; i++) {
+                var e_new_pl = this.new_playlists[i]
+
+                if (e_new_pl.name.trim() == "") {
+                    this.add_pl_error_msg = "All new playlists must have a name!"
+
+                    // Remove error message after 3 seconds
+                    setTimeout(() => {
+                        this.add_pl_error_msg = ""
+                    }, 3000);
+
+                    return
+                }
+            }
+
+            // Add new playlists to Spotify
+            for (var i = 0; i < this.new_playlists.length; i++) {
+                var e_new_pl = this.new_playlists[i]
+
+                var res = await SpotifyApiUtils.createNewPlaylist(e_new_pl.name, e_new_pl.description)
+                this.user_playlists.push(res)
+            }
+
+            // Add new playlists to firebase
+            await firebase.writeDb(`${localStorage.getItem('spotifyUserId')}/new_playlists`, this.user_playlists)
+
+            // Reset modal and variables
+            this.add_playlist_modal.hide()
+            this.new_playlists = [
+                {
+                    name: "",
+                    description: "",
+                }
+            ]
+        },
+        openNewPlaylistModal() {
+            this.add_playlist_modal.show()
+        },
     },
     async mounted() {
         if (window.onSpotifyIframeApiReady) {
@@ -499,6 +625,10 @@ export default {
         })
 
         this.export_progress_modal = new bootstrap.Modal(document.getElementById('exportProgress'), {
+            keyboard: false
+        })
+
+        this.add_playlist_modal = new bootstrap.Modal(document.getElementById('addPlaylistModal'), {
             keyboard: false
         })
 
@@ -589,5 +719,9 @@ export default {
     }
     .bg-progress-custom {
         background-color: #ade9c3;
+    }
+    .btn-clear:hover {
+        background-color: #cbcbcb4c;
+        color: #06BE4B;
     }
 </style>

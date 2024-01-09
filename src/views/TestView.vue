@@ -5,6 +5,7 @@
     <button class="btn btn-primary me-3" @click="getAllPlTracks()">Get all playlist tracks</button>
     <button class="btn btn-primary me-3" @click="getoneplaylist()">Get one playlist item</button>
     <button class="btn btn-primary me-3" @click='getsorted()'>Get sorted songs</button>
+    <button class="btn btn-primary me-3" @click="getNoSong()">Get song that doesnt exit</button>
 </template>
 
 <script>
@@ -42,6 +43,10 @@ export default {
             var x = await firebase.readDb(`/${localStorage.getItem('spotifyUserId')}/sorted_songs`)
             console.log("Sorted songs: ", x)
         },
+        async getNoSong() {
+            var x = await firebase.readDb(`/${localStorage.getItem('spotifyUserId')}/sorted_songs/00OpO638fnjgKoXHeF83d`)
+            console.log("No song: ", x)
+        }
     },
     async mounted() {
         // console.log(await SpotifyApiUtils.getAllPlaylists())
