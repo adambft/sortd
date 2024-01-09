@@ -1,6 +1,6 @@
 <template>
     <div class="container-fluid h-100">
-        <div class="row p-3 pb-2">
+        <div class="row pt-3 pb-2">
             <div class="col-auto">
                 <span 
                     data-bs-toggle="popover"
@@ -11,7 +11,7 @@
                 </span>
             </div>
             
-            <div class="col">
+            <div class="col p-0 pt-1">
                 <div class="progress rounded-5 p-0 bg-progress-custom position-relative" role="progressbar" :aria-valuenow="perc_songs_sorted" aria-valuemin="0" aria-valuemax="100" style="height: 20px">
                     <div class="position-absolute w-100 text-center" v-if="perc_songs_sorted < 10">{{ num_songs_sorted }}/{{ total_num_songs }} Songs Sorted</div>
                     <div class="progress-bar bg-success" :style="{width: `${perc_songs_sorted}%`}">{{ perc_songs_sorted >= 10 ? `${num_songs_sorted }/${ total_num_songs } Songs Sorted` : `` }}</div>
