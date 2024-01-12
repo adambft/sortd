@@ -712,19 +712,25 @@ export const SpotifyApiUtils = {
 
             return true;
         } catch (error) {
-            console.error("Error in running addTracksToPlaylist(): ", error);
+            console.error("Error in running add100TracksToPlaylist(): ", error);
             throw error;
         }
     },
 
-    async addTracksToPlaylist(playlist_id, track_ids_arr) {
+    async addTracksToPlaylist(playlist_id, track_ids_arr, existing_tracks = null) {
         // Add all tracks to playlist, ensure no duplicates
 
         await this.updateAccessToken();
 
         var offset = 0;
         var num_tracks = 100;
-        var playlist_existing_tracks = await this.getAllPlaylistTrackIds(playlist_id);
+        var playlist_existing_tracks
+
+        if (existing_tracks===null) {
+            playlist_existing_tracks = await this.getAllPlaylistTrackIds(playlist_id);
+        } else {
+            playlist_existing_tracks = existing_tracks;
+        }
 
         // Remove tracks that already exist in the playlist
         track_ids_arr = track_ids_arr.filter(e_id => !playlist_existing_tracks.has(e_id));
@@ -733,6 +739,67 @@ export const SpotifyApiUtils = {
             var tracks_to_add = track_ids_arr.slice(offset, offset + num_tracks);
 
             await this.add100TracksToPlaylist(playlist_id, tracks_to_add);
+
+            offset += num_tracks;
+        }
+
+        return true;
+    },
+
+    async delete100TracksFromPlaylist(playlist_id, track_ids_arr) {
+        // Delete tracks from playlist (max 100 tracks per request)
+
+        await this.updateAccessToken();
+
+        var all_tracks_arr = [];
+
+        for (var i = 0; i < track_ids_arr.length; i++) {
+            var e_track_id = track_ids_arr[i];
+
+            all_tracks_arr.push({
+                uri: `spotify:track:${e_track_id}`,
+            });
+        }
+
+        try {
+            const response = await axios.delete(`https://api.spotify.com/v1/playlists/${playlist_id}/tracks`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                },
+                data: {
+                    tracks: all_tracks_arr,
+                }
+            });
+
+            return true;
+        } catch (error) {
+            console.error("Error in running delete100TracksFromPlaylist(): ", error);
+            throw error;
+        }
+    },
+
+    async deleteTracksFromPlaylist(playlist_id, track_ids_arr, existing_tracks = null) {
+        // Delete all tracks from playlist
+
+        await this.updateAccessToken();
+
+        var offset = 0;
+        var num_tracks = 100;
+        var playlist_existing_tracks
+        
+        if (existing_tracks===null) {
+            playlist_existing_tracks = await this.getAllPlaylistTrackIds(playlist_id);
+        } else {
+            playlist_existing_tracks = existing_tracks;
+        }
+
+        // Remove tracks that do not exist in the playlist
+        track_ids_arr = track_ids_arr.filter(e_id => playlist_existing_tracks.has(e_id));
+
+        while (offset < track_ids_arr.length) {
+            var tracks_to_delete = track_ids_arr.slice(offset, offset + num_tracks);
+
+            await this.delete100TracksFromPlaylist(playlist_id, tracks_to_delete);
 
             offset += num_tracks;
         }

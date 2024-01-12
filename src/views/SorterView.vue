@@ -428,7 +428,7 @@ export default {
             var song_id_to_push = this.curr_track.id
             
             var song_data
-            
+
             // get song data
             if (this.songs_to_sort.hasOwnProperty(song_id_to_push)) {
                 song_data = this.songs_to_sort[song_id_to_push]
@@ -552,7 +552,10 @@ export default {
             for (let i = 0; i < this.user_playlists.length; i++) {
                 let e_pl_id = this.user_playlists[i].id
 
-                songs_by_playlist[e_pl_id] = []
+                songs_by_playlist[e_pl_id] = {
+                    add: [],
+                    delete: [],
+                }
             }
             
             // add each song to the playlist
@@ -560,18 +563,28 @@ export default {
                 let e_song_data = sorted_songs[song_id]
                 
                 for (let e_pl_id in songs_by_playlist) {
+                    // skip if playlist not a key
+                    if (!e_song_data.hasOwnProperty(e_pl_id)) {
+                        continue
+                    }
+
                     if (e_song_data[e_pl_id]) {
-                        songs_by_playlist[e_pl_id].push(song_id)
+                        songs_by_playlist[e_pl_id].add.push(song_id)
+                    } else if (!e_song_data[e_pl_id]) {
+                        songs_by_playlist[e_pl_id].delete.push(song_id)
                     }
                 }
             }
             
             // push data to spotify
             for (let e_pl_id in songs_by_playlist) {
+                var playlist_existing_tracks = await SpotifyApiUtils.getAllPlaylistTrackIds(e_pl_id);
                 
-                let e_song_ids = songs_by_playlist[e_pl_id]
+                let songs_to_add = songs_by_playlist[e_pl_id].add
+                let songs_to_delete = songs_by_playlist[e_pl_id].delete
 
-                await SpotifyApiUtils.addTracksToPlaylist(e_pl_id, e_song_ids)
+                await SpotifyApiUtils.addTracksToPlaylist(e_pl_id, songs_to_add, playlist_existing_tracks)
+                await SpotifyApiUtils.deleteTracksFromPlaylist(e_pl_id, songs_to_delete, playlist_existing_tracks)
                 this.playlists_pushed.push(e_pl_id)
             }
 
