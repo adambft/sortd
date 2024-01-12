@@ -18,7 +18,16 @@
                 </div>
             </div>
 
-            <div class="col-auto">
+            <div class="col-auto px-3">
+                <button 
+                    class="btn btn-sm rounded-3 text-secondary search-btn"
+                    @click="openSearchModal()"
+                >
+                <font-awesome-icon icon="fa-solid fa-magnifying-glass" class="fa-lg" />
+                </button>
+            </div>
+
+            <div class="col-auto p-0 pe-3">
                 <button 
                     class="btn btn-sm btn-secondary rounded-3"
                     data-bs-toggle="popover"
@@ -199,6 +208,50 @@
             </div>
         </div>
     </div>
+
+    <!-- search song modal -->
+    <div class="modal fade" tabindex="-1" id="searchModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Search for another song to load</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" placeholder=" " aria-label="Song Search" aria-describedby="songSearchFieldBtn" id="songSearchField" v-model="searchQuery">
+                            <label for="songSearchField">Search for song</label>
+                        </div>
+
+                        <button class="btn btn-success px-3" type="button" id="songSearchFieldBtn" @click="searchForSongs()">
+                            <font-awesome-icon icon="fa-solid fa-magnifying-glass" />
+                        </button>
+                    </div>
+
+                    <div v-if="searchResults.length > 0" v-for="(e_result, index6) in searchResults" :key="index6">
+                        <div class="card card-styling mt-3 border-0" @click="searchForThisSong(e_result.id)">
+                            <div class="row g-0">
+                                <div class="col-auto">
+                                    <img :src="e_result.album.images[0].url" class="rounded-start img-75">
+                                </div>
+
+                                <div class="col d-flex flex-column justify-content-center ps-3">
+                                    <h5 class="text-break truncate-one-line m-0"><font-awesome-icon icon="fa-solid fa-circle-check" class="fa-xs me-1 text-success" v-if="e_result.in_library" />{{ e_result.name }}</h5>
+                                    <p class="text-break truncate-one-line m-0">{{ concatArtistsWithCommas(e_result.artists) }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>
 
 
@@ -231,6 +284,9 @@ export default {
             ],
             add_pl_error_msg: "",
             add_playlist_modal: null,
+            searchModal: null,
+            searchResults: [],
+            searchQuery: "",
         };
     },
     computed: {
@@ -372,10 +428,18 @@ export default {
             var song_id_to_push = this.curr_track.id
             
             var song_data
-
+            
+            // get song data
             if (this.songs_to_sort.hasOwnProperty(song_id_to_push)) {
                 song_data = this.songs_to_sort[song_id_to_push]
             } else {
+                song_data = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/songs_selected/${song_id_to_push}`)
+            }
+
+            // add track to firebase (songs_selected) if not in frebase already
+            if (song_data === null) {
+                this.total_num_songs += 1
+                await SpotifyApiUtils.pushSingleTrackToDb(song_id_to_push)
                 song_data = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/songs_selected/${song_id_to_push}`)
             }
 
@@ -469,18 +533,6 @@ export default {
 
             window.EmbedController.play();
 
-            // get prev sorted data and show selected playlists
-            var prev_sorted_data = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/sorted_songs/${this.curr_track.id}`)
-
-            for (let i = 0; i < this.user_playlists.length; i++) {
-                let e_playlist = this.user_playlists[i]
-                let e_pl_id = e_playlist.id
-
-                if (prev_sorted_data.hasOwnProperty(e_pl_id)) {
-                    e_playlist.to_add = prev_sorted_data[e_pl_id]
-                }
-            }
-
             this.prev_track_id = null
         },
         async pushSortedSongsToSpotify() {
@@ -544,7 +596,9 @@ export default {
         },
         isNewPlModalOpen() {
             const modalElement = document.getElementById('addPlaylistModal');
-            return modalElement.classList.contains('show');
+            const searchModalElement = document.getElementById('searchModal');
+
+            return ( modalElement.classList.contains('show') || searchModalElement.classList.contains('show') );
         },
         openExportProgressModal(close=false) {
             if (close) {
@@ -604,6 +658,41 @@ export default {
         openNewPlaylistModal() {
             this.add_playlist_modal.show()
         },
+        openSearchModal() {
+            this.searchModal.show()
+        },
+        async searchForSongs() {
+            var search_results = await SpotifyApiUtils.searchAll(this.searchQuery, 10)
+            this.searchResults = search_results
+        },
+        concatArtistsWithCommas(artists_data) {
+            // Concatenates artists names with commas
+
+            var all_artists = ""
+
+            for (let i = 0; i < artists_data.length; i++) {
+                let e_artist = artists_data[i]
+                let e_artist_name = e_artist.name
+
+                if (i === 0) {
+                    all_artists = e_artist_name
+                } else {
+                    all_artists += ", " + e_artist_name
+                }
+            }
+
+            return all_artists
+        },
+        async searchForThisSong(track_id) {
+            this.searchModal.hide()
+            this.resetPlaylistSelection()
+            this.prev_track_id = this.curr_track.id
+            await this.loadNewTrack(track_id)
+            window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
+            window.EmbedController.play();
+            this.searchQuery = ""
+            this.searchResults = []
+        },
     },
     async mounted() {
         if (window.onSpotifyIframeApiReady) {
@@ -632,17 +721,28 @@ export default {
             keyboard: false
         })
 
+        this.searchModal = new bootstrap.Modal(document.getElementById('searchModal'), {
+            keyboard: false
+        })
+
         await SpotifyApiUtils.getUserId()
         var get_temp_playlists = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/new_playlists`)
 
-        // go through user_playlists and get the playlist data from spotify
-        for (let i = 0; i < get_temp_playlists.length; i++) {
-            let e_playlist = get_temp_playlists[i]
-            let playlist_data = await SpotifyApiUtils.getOnePlaylist(e_playlist.id)
+        var user_selected_playlists = new Set()
 
-            playlist_data['to_add'] = false
-            
-            this.user_playlists.push(playlist_data)
+        for (let i = 0; i < get_temp_playlists.length; i++) {
+            user_selected_playlists.add(get_temp_playlists[i].id)
+        }
+
+        var all_user_playlists_temp = await SpotifyApiUtils.getAllPlaylists()
+
+        for (let i = 0; i < all_user_playlists_temp.length; i++) {
+            let e_playlist = all_user_playlists_temp[i]
+
+            if (user_selected_playlists.has(e_playlist.id)) {
+                e_playlist['to_add'] = false
+                this.user_playlists.push(e_playlist)
+            }
         }
 
         await this.updateSongsToSort(50)
@@ -699,6 +799,13 @@ export default {
         overflow: hidden;
         text-overflow: ellipsis;
     }
+    .truncate-one-line {
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;  
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
     .bg-selected {
         background-color: #088538;
     }
@@ -723,5 +830,8 @@ export default {
     .btn-clear:hover {
         background-color: #cbcbcb4c;
         color: #06BE4B;
+    }
+    .search-btn:hover {
+        background-color: #cbcbcb4c;
     }
 </style>

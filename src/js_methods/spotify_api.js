@@ -22,6 +22,7 @@ const base64encode = (input) => {
 }
 
 const redirectUri = 'https://adambft-spotify-playlist-sorter.vercel.app/account_authorize';
+// const redirectUri = 'http://localhost:5173/account_authorize'; // for local testing
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[end]
 
 
@@ -391,6 +392,30 @@ export const SpotifyApiUtils = {
         }
     },
 
+    async getSeveralTracks(track_ids_arr) {
+        // Get several tracks
+
+        await this.updateAccessToken();
+
+        // merge array into comma seperated string
+        var track_ids = track_ids_arr.join(',');
+
+        try {
+            const response = await axios.get(`https://api.spotify.com/v1/tracks/?ids=${track_ids}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+            });
+
+            var tracks = response.data;
+
+            return tracks;
+        } catch (error) {
+            console.error("Error in running getOneTrack(): ", error);
+            throw error;
+        }
+    },
+
     async getPlaylistTracksAndPushToDb(playlist_id, num_tracks = 50, offset = 0) {
         var tracks = await this.getPlaylistTracks(playlist_id, num_tracks, offset);
         var res_to_db = {};
@@ -479,6 +504,60 @@ export const SpotifyApiUtils = {
 
         return tracks.length;
     },
+
+    async pushSingleTrackToDb(track_id) {
+        // Same as getPlaylistTracksAndPushToDb() but for only 1 track (pushes to songs_selected)
+
+        var this_track = await this.getOneTrack(track_id);
+
+        var track_name = this_track.name;
+        var track_date_added = new Date().toISOString();
+        var track_release_date = this_track.album.release_date;
+        var artist_ids = []
+
+        this_track.artists.forEach(element => {
+            var e_artist_id = element.id;
+            artist_ids.push(e_artist_id);
+        });
+
+        var track_popularity = this_track.popularity;
+        var track_preview_url = this_track.preview_url;
+        var track_img_url = this_track.album.images[0].url;
+
+        var res_to_db = {
+            name: track_name,
+            date_added: track_date_added,
+            release_date: track_release_date,
+            artist_ids: artist_ids,
+            popularity: track_popularity,
+            preview_url: track_preview_url,
+            img_url: track_img_url,
+        }
+
+        // Build result with audio features
+        var audio_features_data = await this.getTracksAudioFeatures(track_id)
+        var audio_features = audio_features_data[0];
+
+        res_to_db.acousticness = audio_features.acousticness;
+        res_to_db.danceability = audio_features.danceability;
+        res_to_db.energy = audio_features.energy;
+        res_to_db.instrumentalness = audio_features.instrumentalness;
+        res_to_db.key = audio_features.key;
+        res_to_db.liveness = audio_features.liveness;
+        res_to_db.loudness = audio_features.loudness;
+        res_to_db.mode = audio_features.mode;
+        res_to_db.speechiness = audio_features.speechiness;
+        res_to_db.tempo = audio_features.tempo;
+        res_to_db.time_signature = audio_features.time_signature;
+        res_to_db.valence = audio_features.valence;
+        
+        // push to db
+        var user_id = await this.getUserId();
+        await firebase.writeDb(`${user_id}/songs_selected/${track_id}`, res_to_db);
+
+        return true;
+    },
+
 
     async createNewPlaylist(playlist_name, playlist_desc=false) {
         // Create a new playlist
@@ -659,5 +738,109 @@ export const SpotifyApiUtils = {
         }
 
         return true;
+    },
+
+    async searchForTrack(query, limit=10) {
+        // Search for a track + add "in_library" property to each track if it is already in the users songs
+
+        await this.updateAccessToken();
+
+        // get all users songs
+        var all_songs = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/songs_selected`);
+
+        try {
+            const response = await axios.get(`https://api.spotify.com/v1/search?q=${query}&type=track&limit=${limit}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+            });
+
+            var tracks = response.data.tracks.items;
+
+            // check each track if it is already in the users songs (add "in_library" property)
+            for (var i = 0; i < tracks.length; i++) {
+                var e_track = tracks[i];
+
+                if (all_songs.hasOwnProperty(e_track.id)) {
+                    e_track.in_library = true;
+                } else {
+                    e_track.in_library = false;
+                }
+            }
+
+            return tracks;
+        } catch (error) {
+            console.error("Error in running searchForTrack(): ", error);
+            throw error;
+        }
+    },
+
+    async searchForTrackInLibrary(query, add_in_library_property=false) {
+        // search for a track in the users existing songs
+
+        var all_songs = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/songs_selected`);
+
+        var track_ids = [];
+
+        // check each track if it matches the query (even partially)
+        for (var e_track_id in all_songs) {
+            var e_track = all_songs[e_track_id];
+
+            if (e_track.name.toLowerCase().includes(query.toLowerCase())) {
+                track_ids.push(e_track_id);
+            }
+        }
+
+        if (track_ids.length == 0) {
+            return [];
+        }
+
+        if (track_ids.length > 50) {
+            track_ids = track_ids.slice(0, 50);
+        }
+
+        // get all tracks
+        var tracks_data = await this.getSeveralTracks(track_ids);
+
+        if (add_in_library_property) {
+            // add "in_library" property to each track
+            for (var i = 0; i < tracks_data.tracks.length; i++) {
+                var e_track = tracks_data.tracks[i];
+
+                e_track.in_library = true;
+            }
+        }
+
+        return tracks_data.tracks;
+    },
+
+    async searchAll(query, limit=10) {
+        // check BOTH user library and spotify for tracks
+        var res = [];
+        var id_check = new Set()
+
+        // search user library
+        var tracks_in_library = await this.searchForTrackInLibrary(query, true);
+
+        for (var i = 0; i < tracks_in_library.length; i++) {
+            var e_track = tracks_in_library[i];
+
+            res.push(e_track);
+            id_check.add(e_track.id);
+        }
+
+        // search spotify
+        var tracks_in_spotify = await this.searchForTrack(query, limit);
+
+        // ensure no duplicates
+        for (var i = 0; i < tracks_in_spotify.length; i++) {
+            var e_track = tracks_in_spotify[i];
+
+            if (!id_check.has(e_track.id)) {
+                res.push(e_track);
+            }
+        }
+
+        return res;
     },
 }
