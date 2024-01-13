@@ -45,8 +45,25 @@
             <div class="col-md-6 col-12">
                 <div class="sticky-top pt-3">
                     <div :class="curr_track==null ? 'd-none' : ''" class="text-start">
-                        <div class="mb-3">
+                        <div class="mb-3" :class="isMobile ? 'd-none' : ''">
                             <div id="embed-iframe"></div>
+                        </div>
+
+                        <div class="mb-3 bg-light-green rounded-3 p-3" :class="isMobile ? '' : 'd-none'">
+                            <div class="mb-3 d-flex justify-content-start" v-if="curr_track !== null">
+                                <img :src="curr_track.album.images[0].url" class="img-75 rounded">
+                                <div class="ms-3">
+                                    <h5 class="truncate-two-lines">{{ curr_track.name }}</h5>
+                                    <p>{{ all_artists }}</p>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-evenly">
+                                <button class="btn btn-sm btn-secondary" id="playButton"><font-awesome-icon icon="fa-solid fa-play" /></button>
+                                <button class="btn btn-sm btn-secondary" id="pauseButton"><font-awesome-icon icon="fa-solid fa-pause" /></button>
+                                <button class="btn btn-sm btn-secondary"><font-awesome-icon icon="fa-solid fa-backward" /></button>
+                                <button class="btn btn-sm btn-secondary"><font-awesome-icon icon="fa-solid fa-forward" /></button>
+                            </div>
                         </div>
                         
                         <div v-if="all_spotify_genres !== null && all_lastfm_genres !== null">
@@ -287,6 +304,7 @@ export default {
             searchModal: null,
             searchResults: [],
             searchQuery: "",
+            isMobile: false,
         };
     },
     computed: {
@@ -481,10 +499,16 @@ export default {
             // load new track
             await this.loadRandomTrack()
 
-            // Load the new track URI
-            window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
-
-            window.EmbedController.play();
+            this.refreshIsMobile()
+            if (!this.isMobile) {
+                // Load the new track URI
+                window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
+    
+                window.EmbedController.play();
+            } else {
+                // Play from spotify account
+                await SpotifyApiUtils.queueTrack(this.curr_track.id)
+            }
         },
         async confirmDelete() {
             // Clears any selection and pushes to db
@@ -528,10 +552,16 @@ export default {
 
             this.num_songs_sorted -= 1
 
-            // Load the new track URI
-            window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
-
-            window.EmbedController.play();
+            this.refreshIsMobile()
+            if (!this.isMobile) {
+                // Load the new track URI
+                window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
+    
+                window.EmbedController.play();
+            } else {
+                // Play from spotify account
+                await SpotifyApiUtils.queueTrack(this.curr_track.id)
+            }
 
             this.prev_track_id = null
         },
@@ -701,10 +731,22 @@ export default {
             this.resetPlaylistSelection()
             this.prev_track_id = this.curr_track.id
             await this.loadNewTrack(track_id)
-            window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
-            window.EmbedController.play();
+
+            this.refreshIsMobile()
+            if (!this.isMobile) {
+                // Load the new track URI
+                window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
+                window.EmbedController.play();
+            } else {
+                // Play from spotify account
+                await SpotifyApiUtils.queueTrack(this.curr_track.id)
+
+            }
             this.searchQuery = ""
             this.searchResults = []
+        },
+        refreshIsMobile() {
+            this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent);
         },
     },
     async mounted() {
@@ -712,12 +754,17 @@ export default {
             window.location.reload();
         }
 
+        // handle spacebar
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 this.handleSpacebar(e)
             }
         })
 
+        // check if broswer on mobile
+        this.refreshIsMobile()
+
+        // set up modals ========================================================== [START]
         this.del_modal = new bootstrap.Modal(document.getElementById('delModal'), {
             keyboard: false
         })
@@ -737,6 +784,7 @@ export default {
         this.searchModal = new bootstrap.Modal(document.getElementById('searchModal'), {
             keyboard: false
         })
+        // set up modals ========================================================== [END]
 
         await SpotifyApiUtils.getUserId()
         var get_temp_playlists = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/new_playlists`)
@@ -781,6 +829,62 @@ export default {
             IFrameAPI.createController(element, options, callback);
         };
         // Spotify Player ========================================================== [END]
+
+
+        // Spotify SDK Player ========================================================== [START]
+        const SDKplayerScript = document.createElement('script');
+        SDKplayerScript.src = 'https://sdk.scdn.co/spotify-player.js';
+        SDKplayerScript.async = true;
+
+        document.body.appendChild(SDKplayerScript);
+        
+        window.onSpotifyWebPlaybackSDKReady = () => {
+            const token = localStorage.getItem('accessToken');
+            const player = new Spotify.Player({
+                name: 'Adambft Spotify Sorter',
+                getOAuthToken: cb => { cb(token); },
+                volume: 0.5
+            });
+
+            // Ready
+            player.addListener('ready', async ({ device_id }) => {
+                console.log('Ready with Device ID', device_id);
+                localStorage.setItem('spotifyDeviceId', device_id)
+
+                await SpotifyApiUtils.transferPlaybackToBrowser()
+
+                // wait 1 second to ensure transfer is complete then queue
+                await new Promise(r => setTimeout(r, 1000));
+                await SpotifyApiUtils.queueTrack(this.curr_track.id)
+            });
+
+            // Not Ready
+            player.addListener('not_ready', ({ device_id }) => {
+                console.log('Device ID has gone offline', device_id);
+            });
+
+            player.addListener('initialization_error', ({ message }) => {
+                console.error(message);
+            });
+
+            player.addListener('authentication_error', ({ message }) => {
+                console.error(message);
+            });
+
+            player.addListener('account_error', ({ message }) => {
+                console.error(message);
+            });
+
+            document.getElementById('playButton').onclick = function() {
+                player.resume();
+            };
+
+            document.getElementById('pauseButton').onclick = function() {
+                player.pause();
+            };
+
+            player.connect();
+        }
     }
 };
 </script>
@@ -846,5 +950,8 @@ export default {
     }
     .search-btn:hover {
         background-color: #cbcbcb4c;
+    }
+    .bg-light-green {
+        background-color: #a1e3b9;
     }
 </style>

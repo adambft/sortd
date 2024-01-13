@@ -558,7 +558,6 @@ export const SpotifyApiUtils = {
         return true;
     },
 
-
     async createNewPlaylist(playlist_name, playlist_desc=false) {
         // Create a new playlist
 
