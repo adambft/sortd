@@ -909,4 +909,72 @@ export const SpotifyApiUtils = {
 
         return res;
     },
+
+    async resumePlayback() {
+        // Resume playback
+
+        await this.updateAccessToken();
+
+        try {
+            const response = await axios.put(`https://api.spotify.com/v1/me/player/play`, {}, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+            });
+
+            return true;
+        } catch (error) {
+            console.error("Error in running resumePlayback(): ", error);
+            throw error;
+        }
+    },
+
+    async pausePlayback() {
+        // Pause playback
+
+        await this.updateAccessToken();
+
+        try {
+            const response = await axios.put(`https://api.spotify.com/v1/me/player/pause`, {}, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+            });
+
+            return true;
+        } catch (error) {
+            console.error("Error in running pausePlayback(): ", error);
+            throw error;
+        }
+    },
+
+    async shiftPlayback(s_to_shift) {
+        // Shift playback by set number of seconds
+
+        await this.updateAccessToken();
+
+        var ms_to_shift = s_to_shift * 1000;
+
+        var curr_playback_state = await this.getPlaybackState();
+        var curr_position = curr_playback_state.progress_ms;
+        var new_position = curr_position + ms_to_shift;
+
+        // handle null position (i still dk what null means in this context)
+        if (curr_position == null) {
+            curr_position = 0;
+        }
+
+        try {
+            const response = await axios.put(`https://api.spotify.com/v1/me/player/seek?position_ms=${new_position}`, {}, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+            });
+
+            return true;
+        } catch (error) {
+            console.error("Error in running pausePlayback(): ", error);
+            throw error;
+        }
+    },
 }

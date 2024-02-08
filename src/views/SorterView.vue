@@ -13,8 +13,8 @@
             
             <div class="col p-0 pt-1">
                 <div class="progress rounded-5 p-0 bg-progress-custom position-relative" role="progressbar" :aria-valuenow="perc_songs_sorted" aria-valuemin="0" aria-valuemax="100" style="height: 20px">
-                    <div class="position-absolute w-100 text-center" v-if="perc_songs_sorted < 10">{{ num_songs_sorted }}/{{ total_num_songs }} Songs Sorted</div>
-                    <div class="progress-bar bg-success" :style="{width: `${perc_songs_sorted}%`}">{{ perc_songs_sorted >= 10 ? `${num_songs_sorted }/${ total_num_songs } Songs Sorted` : `` }}</div>
+                    <div class="position-absolute w-100 text-center" v-if="perc_songs_sorted < 25">{{ num_songs_sorted }}/{{ total_num_songs }}</div>
+                    <div class="progress-bar bg-success" :style="{width: `${perc_songs_sorted}%`}">{{ perc_songs_sorted >= 25 ? `${num_songs_sorted }/${ total_num_songs }` : `` }}</div>
                 </div>
             </div>
 
@@ -59,10 +59,10 @@
                             </div>
 
                             <div class="d-flex justify-content-evenly">
-                                <button class="btn btn-sm btn-secondary" id="playButton"><font-awesome-icon icon="fa-solid fa-play" /></button>
-                                <button class="btn btn-sm btn-secondary" id="pauseButton"><font-awesome-icon icon="fa-solid fa-pause" /></button>
-                                <button class="btn btn-sm btn-secondary"><font-awesome-icon icon="fa-solid fa-backward" /></button>
-                                <button class="btn btn-sm btn-secondary"><font-awesome-icon icon="fa-solid fa-forward" /></button>
+                                <button class="btn btn-sm btn-secondary" id="playButton" @click="resumePlayback()"><font-awesome-icon icon="fa-solid fa-play" /></button>
+                                <button class="btn btn-sm btn-secondary" id="pauseButton" @click="pausePlayback()"><font-awesome-icon icon="fa-solid fa-pause" /></button>
+                                <button class="btn btn-sm btn-secondary" @click="backwardPlayback()"><font-awesome-icon icon="fa-solid fa-backward" /></button>
+                                <button class="btn btn-sm btn-secondary" @click="forwardPlayback()"><font-awesome-icon icon="fa-solid fa-forward" /></button>
                             </div>
                         </div>
                         
@@ -124,24 +124,24 @@
                 <button class="btn btn-secondary btn-lg m-5 btn-stay-there-2" @click="loadPrevTrack()" v-if="prev_track_id">Go Back</button>
             </div>
         </div>
+    </div>
+    
+    <!-- delete confirmation modal -->
+    <div class="modal fade" tabindex="-1" id="delModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm this is no longer your jam?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
 
-        <!-- delete confirmation modal -->
-        <div class="modal fade" tabindex="-1" id="delModal">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Confirm this is no longer your jam?</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
+                <div class="modal-body">
+                    <p><b>{{ curr_track ? curr_track.name : 'This song' }}</b> will NOT be added to any of your new playlists.</p>
+                </div>
 
-                    <div class="modal-body">
-                        <p><b>{{ curr_track ? curr_track.name : 'This song' }}</b> will NOT be added to any of your new playlists.</p>
-                    </div>
-
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-danger" @click="confirmDelete()" data-bs-dismiss="modal">Confirm</button>
-                    </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @click="confirmDelete()" data-bs-dismiss="modal">Confirm</button>
                 </div>
             </div>
         </div>
@@ -748,6 +748,18 @@ export default {
         refreshIsMobile() {
             this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent);
         },
+        async resumePlayback() {
+            await SpotifyApiUtils.resumePlayback()
+        },
+        async pausePlayback() {
+            await SpotifyApiUtils.pausePlayback()
+        },
+        async forwardPlayback() {
+            await SpotifyApiUtils.shiftPlayback(5)
+        },
+        async backwardPlayback() {
+            await SpotifyApiUtils.shiftPlayback(-5)
+        }
     },
     async mounted() {
         if (window.onSpotifyIframeApiReady) {
@@ -851,10 +863,10 @@ export default {
                 console.log('Ready with Device ID', device_id);
                 localStorage.setItem('spotifyDeviceId', device_id)
 
-                await SpotifyApiUtils.transferPlaybackToBrowser()
+                // await SpotifyApiUtils.transferPlaybackToBrowser()
 
-                // wait 1 second to ensure transfer is complete then queue
-                await new Promise(r => setTimeout(r, 1000));
+                // // wait 1 second to ensure transfer is complete then queue
+                // await new Promise(r => setTimeout(r, 1000));
                 await SpotifyApiUtils.queueTrack(this.curr_track.id)
             });
 
