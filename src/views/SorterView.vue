@@ -168,7 +168,7 @@
         </div>
     </div>
 
-    <!-- export progress modal -->
+    <!-- export progress modal (main) -->
     <div class="modal fade" tabindex="-1" id="exportProgress" data-bs-backdrop="static">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -182,6 +182,22 @@
                         <font-awesome-icon icon="fa-solid fa-circle-check" class="me-3 text-success" v-else />
                         {{ e_pl.name }}
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- export progress modal (adding new songs) -->
+    <div class="modal fade" tabindex="-1" id="addingNewSongs" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Adding Your New Songs ({{newSongsAddedNum}}/{{ newSongsTotalNum }}) ...</h5>
+                </div>
+
+                <div class="modal-body" v-if="songBeingAdded !== null">
+                    <img :src="songBeingAdded.album.images[0].url" class="img-75 rounded">
+                    <span class="ms-3 fw-bold">{{ songBeingAdded.name }}</span>
                 </div>
             </div>
         </div>
@@ -305,6 +321,9 @@ export default {
             searchResults: [],
             searchQuery: "",
             isMobile: false,
+            newSongsTotalNum: null,
+            newSongsAddedNum: null,
+            songBeingAdded: null,
         };
     },
     computed: {
@@ -535,7 +554,7 @@ export default {
                 let e_playlist = this.user_playlists[i]
                 
                 if (e_playlist.to_add) {
-                    this.saveSelection()
+                    await this.saveSelection()
                     return
                 }
             }
@@ -575,8 +594,10 @@ export default {
             await new Promise(r => setTimeout(r, 1000));
 
             var sorted_songs = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/sorted_songs`)
+            var all_user_songs = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/songs_selected`)
 
             var songs_by_playlist = {}
+            var newly_added_songs = {}
 
             // add each userplaylist to songs_by_playlist
             for (let i = 0; i < this.user_playlists.length; i++) {
@@ -608,19 +629,74 @@ export default {
             
             // push data to spotify
             for (let e_pl_id in songs_by_playlist) {
+                // Get all tracks from the playlist
                 var playlist_existing_tracks = await SpotifyApiUtils.getAllPlaylistTrackIds(e_pl_id);
                 
                 let songs_to_add = songs_by_playlist[e_pl_id].add
                 let songs_to_delete = songs_by_playlist[e_pl_id].delete
+
+                // find new songs (added in playlist but not in Firebase)
+                playlist_existing_tracks.forEach(new_song => {
+                    if (!sorted_songs.hasOwnProperty(new_song)) {
+                        // If song added to newly_added_songs alr
+                        if (newly_added_songs.hasOwnProperty(new_song)) {
+                            newly_added_songs[new_song].push(e_pl_id)
+                        }
+
+                        // Else
+                        else {
+                            newly_added_songs[new_song] = [e_pl_id]
+                        }
+                    }
+                });
 
                 await SpotifyApiUtils.addTracksToPlaylist(e_pl_id, songs_to_add, playlist_existing_tracks)
                 await SpotifyApiUtils.deleteTracksFromPlaylist(e_pl_id, songs_to_delete, playlist_existing_tracks)
                 this.playlists_pushed.push(e_pl_id)
             }
 
-            await new Promise(r => setTimeout(r, 1000));
+            await new Promise(r => setTimeout(r, 500));
             this.export_progress_modal.hide()
+
+            // Push new songs to Firebase (If there are songs to add)
+            if (Object.keys(newly_added_songs).length > 0) {
+
+                this.adding_new_songs_modal.show()
+    
+                this.newSongsTotalNum = Object.keys(newly_added_songs).length
+                this.newSongsAddedNum = 0
+    
+                for (let song_id in newly_added_songs) {
+                    this.newSongsAddedNum += 1
+                    let e_song_pl_data = newly_added_songs[song_id]
+    
+                    let song_data = await SpotifyApiUtils.getOneTrack(song_id)
+                    this.songBeingAdded = song_data
+    
+                    let track_id = song_data.id
+    
+                    // add track to Firebase (songs_selected) IF not in Firebase already
+                    if (all_user_songs === null || !all_user_songs.hasOwnProperty(track_id)) {
+                        await SpotifyApiUtils.pushSingleTrackToDb(track_id)
+                    }
+    
+                    // add track and playlist selection to Firebase (sorted_songs)
+                    let playlists_obj = {}
+    
+                    e_song_pl_data.forEach(e_pl_id => {
+                        playlists_obj[e_pl_id] = true
+                    });
+    
+                    firebase.writeDb(`${localStorage.getItem('spotifyUserId')}/sorted_songs/${track_id}`, playlists_obj)
+                }
+    
+                this.adding_new_songs_modal.hide()
+            }
+
             this.playlists_pushed = []
+            this.newSongsAddedNum = null
+            this.newSongsTotalNum = null
+            this.songBeingAdded = null
         },
         handleSpacebar(e) {
             if (this.isNewPlModalOpen()) {
@@ -642,13 +718,6 @@ export default {
             const searchModalElement = document.getElementById('searchModal');
 
             return ( modalElement.classList.contains('show') || searchModalElement.classList.contains('show') );
-        },
-        openExportProgressModal(close=false) {
-            if (close) {
-                this.export_progress_modal.hide()
-            } else {
-                this.export_progress_modal.show()
-            }
         },
         remove_playlist(index) {
             this.new_playlists.splice(index, 1)
@@ -786,6 +855,10 @@ export default {
         })
 
         this.export_progress_modal = new bootstrap.Modal(document.getElementById('exportProgress'), {
+            keyboard: false
+        })
+
+        this.adding_new_songs_modal = new bootstrap.Modal(document.getElementById('addingNewSongs'), {
             keyboard: false
         })
 

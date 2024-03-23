@@ -177,7 +177,7 @@
                     }
                 }
 
-                // Redirect to the playlist create page after 2 seconds
+                // Redirect to the playlist create page after 1.5 seconds
                 setTimeout(() => {
                     this.showLoadingModal(false)
                     this.$router.push('/app/playlist_create')

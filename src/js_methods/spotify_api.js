@@ -393,7 +393,12 @@ export const SpotifyApiUtils = {
     },
 
     async getSeveralTracks(track_ids_arr) {
-        // Get several tracks
+        // Get several tracks (max 100)
+
+        if (track_ids_arr.length > 100) {
+            console.error("Error in running getSeveralTracks(): Max 100 tracks allowed");
+            return false;
+        }
 
         await this.updateAccessToken();
 
@@ -411,7 +416,7 @@ export const SpotifyApiUtils = {
 
             return tracks;
         } catch (error) {
-            console.error("Error in running getOneTrack(): ", error);
+            console.error("Error in running getSeveralTracks(): ", error);
             throw error;
         }
     },
