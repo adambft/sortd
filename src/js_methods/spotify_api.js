@@ -21,8 +21,8 @@ const base64encode = (input) => {
         .replace(/\//g, '_');
 }
 
-const redirectUri = 'https://adambft-spotify-playlist-sorter.vercel.app/account_authorize';
-// const redirectUri = 'http://localhost:5173/account_authorize'; // for local testing
+// const redirectUri = 'https://adambft-spotify-playlist-sorter.vercel.app/account_authorize';
+const redirectUri = 'http://localhost:5173/account_authorize'; // for local testing
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[end]
 
 
@@ -629,7 +629,7 @@ export const SpotifyApiUtils = {
         try {
             const response = await axios.put(`https://api.spotify.com/v1/me/player`, {
                 device_ids: [localStorage.getItem('spotifyDeviceId')],
-                play: false,
+                play: true,
             }, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -639,6 +639,28 @@ export const SpotifyApiUtils = {
             return true;
         } catch (error) {
             console.error("Error in running trasnferPlaybackToBrowser(): ", error);
+            throw error;
+        }
+    },
+
+    async transferPlaybackToDevice(device_id) {
+        // Transfer playback to device
+
+        await this.updateAccessToken();
+
+        try {
+            const response = await axios.put(`https://api.spotify.com/v1/me/player`, {
+                device_ids: [device_id],
+                play: true,
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+            });
+
+            return true;
+        } catch (error) {
+            console.error("Error in running trasnferPlaybackToDevice(): ", error);
             throw error;
         }
     },

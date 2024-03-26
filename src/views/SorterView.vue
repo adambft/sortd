@@ -1,6 +1,9 @@
 <template>
+    <!-- Entire Page -->
     <div class="container-fluid h-100">
+        <!-- Top Section -->
         <div class="row pt-3 pb-2">
+            <!-- Tooltip -->
             <div class="col-auto">
                 <span 
                     data-bs-toggle="popover"
@@ -11,6 +14,7 @@
                 </span>
             </div>
             
+            <!-- Progress Bar -->
             <div class="col p-0 pt-1">
                 <div class="progress rounded-5 p-0 bg-progress-custom position-relative" role="progressbar" :aria-valuenow="perc_songs_sorted" aria-valuemin="0" aria-valuemax="100" style="height: 20px">
                     <div class="position-absolute w-100 text-center" v-if="perc_songs_sorted < 25">{{ num_songs_sorted }}/{{ total_num_songs }}</div>
@@ -18,6 +22,7 @@
                 </div>
             </div>
 
+            <!-- Search Button -->
             <div class="col-auto px-3">
                 <button 
                     class="btn btn-sm rounded-3 text-secondary search-btn"
@@ -27,6 +32,7 @@
                 </button>
             </div>
 
+            <!-- Save to Spotify Button -->
             <div class="col-auto p-0 pe-3">
                 <button 
                     class="btn btn-sm btn-secondary rounded-3"
@@ -41,15 +47,20 @@
             </div>
         </div>
 
+        <!-- Main Section -->
         <div class="row h-100">
+            <!-- Music Player/ Controller -->
             <div class="col-md-6 col-12">
                 <div class="sticky-top pt-3">
                     <div :class="curr_track==null ? 'd-none' : ''" class="text-start">
+                        <!-- In Desktop Player -->
                         <div class="mb-3" :class="isMobile ? 'd-none' : ''">
                             <div id="embed-iframe"></div>
                         </div>
 
+                        <!-- In Mobile/ Desktop Controller -->
                         <div class="mb-3 bg-light-green rounded-3 p-3" :class="isMobile ? '' : 'd-none'">
+                            <!-- Track Info -->
                             <div class="mb-3 d-flex justify-content-start" v-if="curr_track !== null">
                                 <img :src="curr_track.album.images[0].url" class="img-75 rounded">
                                 <div class="ms-3">
@@ -58,14 +69,22 @@
                                 </div>
                             </div>
 
+                            <!-- Playback Controls -->
                             <div class="d-flex justify-content-evenly">
                                 <button class="btn btn-sm btn-secondary" id="playButton" @click="resumePlayback()"><font-awesome-icon icon="fa-solid fa-play" /></button>
                                 <button class="btn btn-sm btn-secondary" id="pauseButton" @click="pausePlayback()"><font-awesome-icon icon="fa-solid fa-pause" /></button>
                                 <button class="btn btn-sm btn-secondary" @click="backwardPlayback()"><font-awesome-icon icon="fa-solid fa-backward" /></button>
                                 <button class="btn btn-sm btn-secondary" @click="forwardPlayback()"><font-awesome-icon icon="fa-solid fa-forward" /></button>
                             </div>
+
+                            <!-- Device Playing -->
+                            <div class="mt-3 d-flex align-items-center justify-content-center" v-if="curr_playback_name !== null">
+                                <button class="btn btn-sm btn-outline-secondary btn-playback" :disabled="secondary_playback_id === null ? true : false" id="togglePlayback" @click="togglePlayback()"><font-awesome-icon icon="fa-solid fa-volume-high" /></button>
+                                <p class="text-secondary m-0">Playing from: {{ curr_playback_name }}</p>
+                            </div>
                         </div>
                         
+                        <!-- Genre Info -->
                         <div v-if="all_spotify_genres !== null && all_lastfm_genres !== null">
                             <span 
                                 v-if="all_spotify_genres.length > 0 || all_lastfm_genres.length > 0"
@@ -87,6 +106,7 @@
                         </div>
                     </div>
 
+                    <!-- Loading Spinner -->
                     <div :class="curr_track==null ? '' : 'd-none'" class="d-flex justify-content-center align-items-center mt-5 pt-5">
                         <div class="w-100">
                             <font-awesome-icon icon="fa-solid fa-spinner" class="fa-spin-pulse fa-4x text-success w-100" />
@@ -96,6 +116,7 @@
                 </div>
             </div>
 
+            <!-- Playlist Selection/ List -->
             <div class="col-md-6 col-12 padding-lg">
                 <div v-for="(e_playlist, index2) in user_playlists" :key="index2">
                     <div class="card card-styling mt-3 border-0" :class="e_playlist.to_add ? 'bg-selected text-white' : '' " @click="e_playlist.to_add = !e_playlist.to_add">
@@ -126,6 +147,8 @@
         </div>
     </div>
     
+    <!-- ALL MODALS BELOW HERE ===================================================== -->
+
     <!-- delete confirmation modal -->
     <div class="modal fade" tabindex="-1" id="delModal">
         <div class="modal-dialog">
@@ -324,6 +347,12 @@ export default {
             newSongsTotalNum: null,
             newSongsAddedNum: null,
             songBeingAdded: null,
+
+            // Playback variables
+            curr_playback_name: null,
+            curr_playing_here: false,
+            secondary_playback_id: null,
+            secondary_playback_name: null,
         };
     },
     computed: {
@@ -828,7 +857,19 @@ export default {
         },
         async backwardPlayback() {
             await SpotifyApiUtils.shiftPlayback(-5)
-        }
+        },
+        async togglePlayback() {
+            // Toggle playback between current browser and secondary device
+            if (this.curr_playing_here) {
+                await SpotifyApiUtils.transferPlaybackToDevice(this.secondary_playback_id)
+                this.curr_playing_here = false
+                this.curr_playback_name = this.secondary_playback_name
+            } else {
+                await SpotifyApiUtils.transferPlaybackToBrowser()
+                this.curr_playing_here = true
+                this.curr_playback_name = "This Browser"
+            }
+        },
     },
     async mounted() {
         if (window.onSpotifyIframeApiReady) {
@@ -936,10 +977,30 @@ export default {
                 console.log('Ready with Device ID', device_id);
                 localStorage.setItem('spotifyDeviceId', device_id)
 
-                // await SpotifyApiUtils.transferPlaybackToBrowser()
+                // Get currently playing device's ID and save to vue variables
+                var curr_playback_data = await SpotifyApiUtils.getPlaybackState()
 
-                // // wait 1 second to ensure transfer is complete then queue
-                // await new Promise(r => setTimeout(r, 1000));
+                // Check if playback data is empty (ie. No devices connected rn)
+                if (curr_playback_data == '') {
+                    console.log("No devices connected rn")
+
+                    this.curr_playback_name = "This Browser"
+                    this.secondary_playback_id = null
+                    this.curr_playing_here = true
+                    this.secondary_playback_name = null
+
+                    await SpotifyApiUtils.transferPlaybackToBrowser()
+
+                    // Wait 1 second to ensure transfer is done
+                    await new Promise(r => setTimeout(r, 1000));
+                } else {
+                    this.secondary_playback_id = curr_playback_data.device.id
+                    this.curr_playback_name = curr_playback_data.device.name
+                    this.curr_playing_here = false
+                    this.secondary_playback_name = curr_playback_data.device.name
+                }
+
+                // Queue track
                 await SpotifyApiUtils.queueTrack(this.curr_track.id)
             });
 
@@ -1038,5 +1099,14 @@ export default {
     }
     .bg-light-green {
         background-color: #a1e3b9;
+    }
+    .btn-playback {
+        aspect-ratio: 1/1;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+        font-size: 0.5rem;
+    }
+    .btn-playback:disabled {
+        border: none;
     }
 </style>
