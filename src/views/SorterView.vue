@@ -4,14 +4,35 @@
         <!-- Top Section -->
         <div class="row pt-3 pb-2">
             <!-- Tooltip -->
-            <div class="col-auto">
-                <span 
+            <div class="col-auto d-flex align-items-center ms-1">
+                <span
                     data-bs-toggle="popover"
                     data-bs-trigger="hover"
                     data-bs-html="true"
                     data-bs-content="This is where you can start sorting your songs. <br> <br> Select the playlist(s) on the right that you want to add this song to, then click <b class='text-success'>'Save'</b> <br> <br> If you don't want to add the song to any of your playlists, click <b class='text-secondary'>'Not my jam anymore'</b>."
                     ><font-awesome-icon icon="fa-solid fa-circle-question" class="fa-lg text-success" />
                 </span>
+            </div>
+
+            <!-- Settings -->
+            <div class="col-auto p-0 pe-2 dropdown">
+                <button 
+                    class="btn btn-sm rounded-3 text-secondary settings-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside"
+                >
+                    <font-awesome-icon icon="fa-solid fa-gear" class="fa-lg" />
+                </button>
+
+                <!-- Remote Mode Toggle -->
+                <ul class="dropdown-menu border-0">
+                    <li>
+                        <span class="dropdown-item-text">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckDefault" v-model="isMobile" @input="handleRemoteModeSwitched()">
+                                <label class="form-check-label text-nowrap fw-semibold text-secondary" for="flexSwitchCheckDefault">Remote Mode</label>
+                            </div>
+                        </span>
+                    </li>
+                </ul>
             </div>
             
             <!-- Progress Bar -->
@@ -126,8 +147,8 @@
                                 <img v-else src="https://placehold.co/75x75?text=No+Img" class="rounded-start">
                             </div>
 
-                            <div class="col d-flex align-items-center ps-3">
-                                <h4 class="text-break truncate-two-lines">{{ e_playlist.name }}</h4>
+                            <div class="col d-flex align-items-center px-3">
+                                <h4 class="text-break truncate-two-lines mb-0">{{ e_playlist.name }}</h4>
                             </div>
                         </div>
                     </div>
@@ -547,7 +568,6 @@ export default {
             // load new track
             await this.loadRandomTrack()
 
-            this.refreshIsMobile()
             if (!this.isMobile) {
                 // Load the new track URI
                 window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
@@ -600,7 +620,6 @@ export default {
 
             this.num_songs_sorted -= 1
 
-            this.refreshIsMobile()
             if (!this.isMobile) {
                 // Load the new track URI
                 window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
@@ -830,7 +849,6 @@ export default {
             this.prev_track_id = this.curr_track.id
             await this.loadNewTrack(track_id)
 
-            this.refreshIsMobile()
             if (!this.isMobile) {
                 // Load the new track URI
                 window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
@@ -868,6 +886,19 @@ export default {
                 await SpotifyApiUtils.transferPlaybackToBrowser()
                 this.curr_playing_here = true
                 this.curr_playback_name = "This Browser"
+            }
+        },
+        handleRemoteModeSwitched() {
+            // Switch between remote and local playback
+            this.isMobile = !this.isMobile
+
+            if (!this.isMobile) {
+                // Load the new track URI
+                window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
+                window.EmbedController.play();
+            } else {
+                // Play from spotify account
+                SpotifyApiUtils.queueTrack(this.curr_track.id)
             }
         },
     },
@@ -936,7 +967,7 @@ export default {
 
         await this.loadRandomTrack()
 
-        // Spotify Player ========================================================== [START]
+        // Spotify Player [Play in Browser] ========================================================== [START]
         const playerScript = document.createElement('script');
         playerScript.src = 'https://open.spotify.com/embed/iframe-api/v1';
         playerScript.async = true;
@@ -957,7 +988,7 @@ export default {
         // Spotify Player ========================================================== [END]
 
 
-        // Spotify SDK Player ========================================================== [START]
+        // Spotify SDK Player [Remote Controller] ========================================================== [START]
         const SDKplayerScript = document.createElement('script');
         SDKplayerScript.src = 'https://sdk.scdn.co/spotify-player.js';
         SDKplayerScript.async = true;
@@ -1096,6 +1127,10 @@ export default {
     }
     .search-btn:hover {
         background-color: #cbcbcb4c;
+    }
+    .settings-btn:hover, .settings-btn:active, .settings-btn:focus {
+        background-color: #cbcbcb4c;
+        border-color: transparent;
     }
     .bg-light-green {
         background-color: #a1e3b9;
