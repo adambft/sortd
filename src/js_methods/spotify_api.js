@@ -676,11 +676,29 @@ export const SpotifyApiUtils = {
             return false;
         }
 
+        // Check current playback status
+        var curr_playback_state = await this.getPlaybackState();
+
+        var curr_track_id = curr_playback_state.item.id;
+        var is_playing = curr_playback_state.is_playing;
+
+        // If intended track is already there AND playing, don't queue
+        if (curr_track_id == track_id && is_playing) {
+            return true;
+        }
+
+        // Figure out when to start track
+        var curr_position = 0
+
+        if (curr_track_id == track_id) {
+            curr_position = curr_playback_state.progress_ms;
+        }
+
         try {
             const response = await axios.put(`https://api.spotify.com/v1/me/player/play`,
             {
                 uris: [`spotify:track:${track_id}`],
-                position_ms: 0,
+                position_ms: curr_position,
             }, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
