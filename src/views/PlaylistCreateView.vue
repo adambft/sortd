@@ -35,7 +35,7 @@
                     <div class="card border-0 mb-3 pointer-hover card-styling position-relative" :class="e_playlist.to_add ? 'bg-selected text-white' : ''" @click="cardClicked(e_playlist)">
                         <div class="row g-0">
                             <div class="col-auto">
-                                <img v-if="e_playlist.images.length > 0 " :src="e_playlist.images[0].url" class="rounded-start img-125">
+                                <img v-if="e_playlist.images !== null && e_playlist.images.length > 0" :src="e_playlist.images[0].url" class="rounded-start img-125">
                                 <img v-else src="https://placehold.co/125x125?text=No+Img" class="rounded-start">
                             </div>
             
@@ -268,7 +268,7 @@
             for (var i = 0; i < temp_user_playlists.length; i++) {
                 var playlist = temp_user_playlists[i]
 
-                if (playlist.tracks.total == 0) {
+                if (playlist.tracks.total == 0 && playlist.owner.id !== "spotify") {
                     playlist["to_add"] = false
                     this.curr_user_playlists.push(playlist)
                 }

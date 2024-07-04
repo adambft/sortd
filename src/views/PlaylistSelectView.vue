@@ -37,7 +37,7 @@
                     <div class="card border-0 mb-3 pointer-hover card-styling position-relative" :class="e_playlist.to_add ? 'bg-selected text-white' : ''" @click="cardClicked(e_playlist)">
                         <div class="row g-0">
                             <div class="col-auto">
-                                <img v-if="e_playlist.images.length > 0 " :src="e_playlist.images[0].url" class="rounded-start img-125">
+                                <img v-if="e_playlist.images !== null && e_playlist.images.length > 0" :src="e_playlist.images[0].url" class="rounded-start img-125">
                                 <img v-else src="https://placehold.co/125x125?text=No+Img" class="rounded-start">
                             </div>
             
@@ -64,7 +64,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Adding Your Songs</h5>
+                    <h5 class="modal-title"><font-awesome-icon icon="fa-solid fa-spinner" class="fa-spin-pulse me-2" />Adding Your Songs</h5>
                 </div>
 
                 <div class="modal-body">
@@ -131,6 +131,12 @@
                 if (!to_show) {
                     this.myModal.hide()
                 } else {
+                    // Go thorugh all selected playlists and update total number of tracks to add
+                    this.num_tracks_to_add = this.user_playlists
+                        .filter(obj => obj.to_add === true)
+                        .map(obj => obj.tracks.total)
+                        .reduce((acc, val) => acc + val, 0)
+
                     this.myModal.show()
                 }
             },

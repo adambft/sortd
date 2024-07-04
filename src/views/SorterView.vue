@@ -143,7 +143,7 @@
                     <div class="card card-styling mt-3 border-0" :class="e_playlist.to_add ? 'bg-selected text-white' : '' " @click="e_playlist.to_add = !e_playlist.to_add">
                         <div class="row g-0">
                             <div class="col-auto">
-                                <img v-if="e_playlist.images != null && e_playlist.images.length > 0 " :src="e_playlist.images[0].url" class="rounded-start img-75">
+                                <img v-if="e_playlist.images !== null && e_playlist.images.length > 0 " :src="e_playlist.images[0].url" class="rounded-start img-75">
                                 <img v-else src="https://placehold.co/75x75?text=No+Img" class="rounded-start">
                             </div>
 
@@ -1013,8 +1013,7 @@ export default {
 
                 // Check if playback data is empty (ie. No devices connected rn)
                 if (curr_playback_data == '') {
-                    console.log("No devices connected rn")
-
+                    // No devices connected right now
                     this.curr_playback_name = "This Browser"
                     this.secondary_playback_id = null
                     this.curr_playing_here = true
