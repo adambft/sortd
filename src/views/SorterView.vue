@@ -442,6 +442,8 @@ export default {
             // update any current playlist selections
             var sorted_data = await firebase.readDb(`/${localStorage.getItem('spotifyUserId')}/sorted_songs/${track_id}`)
             
+            this.resetPlaylistSelection()
+
             if (sorted_data === null) {
                 return
             }
@@ -562,9 +564,6 @@ export default {
                 await this.updateSongsToSort(50)
             }
 
-            // reset playlist selection
-            this.resetPlaylistSelection();
-
             // load new track
             await this.loadRandomTrack()
 
@@ -612,9 +611,6 @@ export default {
             return
         },
         async loadPrevTrack() {
-            // reset playlist selection
-            this.resetPlaylistSelection();
-
             // load previous track
             await this.loadNewTrack(this.prev_track_id)
 
@@ -845,7 +841,6 @@ export default {
         },
         async searchForThisSong(track_id) {
             this.searchModal.hide()
-            this.resetPlaylistSelection()
             this.prev_track_id = this.curr_track.id
             await this.loadNewTrack(track_id)
 
@@ -965,7 +960,18 @@ export default {
 
         await this.updateSongsToSort(50)
 
-        await this.loadRandomTrack()
+        // Check if Spotify already playing songs. If yes, load the currently playing song
+        var curr_playback_data = await SpotifyApiUtils.getPlaybackState()
+
+        if (curr_playback_data !== '') {
+            // Load currently playing song
+            var song_to_load = curr_playback_data.item.id
+
+            await this.loadNewTrack(song_to_load)
+        } else {
+            // Load random track
+            await this.loadRandomTrack()
+        }
 
         // Spotify Player [Play in Browser] ========================================================== [START]
         const playerScript = document.createElement('script');
