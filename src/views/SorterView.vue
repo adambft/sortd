@@ -162,8 +162,12 @@
                     <button class="btn btn-sm btn-clear mt-4 fw-bold rounded-5 px-3" @click="openNewPlaylistModal()"><font-awesome-icon icon="fa-solid fa-circle-plus" class="me-2" />Add New Playlist</button>
                 </div>
 
-                <button class="btn btn-success btn-lg m-5 btn-stay-there" @click="checkPlaylistBeforeSave()">Save</button>
-                <button class="btn btn-secondary btn-lg m-5 btn-stay-there-2" @click="loadPrevTrack()" v-if="prev_track_id">Go Back</button>
+                <div class="btn-stay-there">
+                    <button class="btn btn-secondary btn-lg me-4 border border-4 border-white border-opacity-50" @click="shuffleToNewSong()"><font-awesome-icon icon="fa-solid fa-shuffle" /></button>
+                    <button class="btn btn-success btn-lg m-5 ms-0 border border-4 border-white border-opacity-50" @click="checkPlaylistBeforeSave()"><font-awesome-icon icon="fa-solid fa-thumbs-up" /></button>
+                </div>
+
+                <button class="btn btn-secondary btn-lg m-5 btn-stay-there-2 border border-4 border-white border-opacity-50" @click="loadPrevTrack()" v-if="prev_track_id"><font-awesome-icon icon="fa-solid fa-backward" /></button>
             </div>
         </div>
     </div>
@@ -348,6 +352,7 @@ export default {
             songs_to_sort: {},
             del_modal: null,
             prev_track_id: null,
+            prev_track_was_saved: false,
             total_num_songs: 0,
             num_songs_sorted: 0,
             save_confirm_modal: null,
@@ -374,6 +379,10 @@ export default {
             curr_playing_here: false,
             secondary_playback_id: null,
             secondary_playback_name: null,
+
+            // Settings
+            num_songs_to_sort: 50, // Number of songs to add to shuffle bag on load
+            min_songs_in_bag: 20, // Minimum number of songs needed when randomly choosing new song
         };
     },
     computed: {
@@ -457,7 +466,8 @@ export default {
                 }
             }
         },
-        async updateSongsToSort(limit=50) {
+        async updateSongsToSort(limit=this.num_songs_to_sort) {
+
             var all_user_songs = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/songs_selected`)
             var sorted_songs = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/sorted_songs`)
 
@@ -502,17 +512,38 @@ export default {
             }
         },
         async loadRandomTrack() {
+            // record current track id (if available)
+            var curr_song_id_temp = null
+
+            if (this.curr_track !== null) {
+                curr_song_id_temp = this.curr_track.id
+            }
+
+            // initiate variables
+            var random_song_id = null
+
+            // get random song [but ensure its not the same as current song]
+            while (random_song_id === null || random_song_id === curr_song_id_temp) {
+                var all_song_ids = Object.keys(this.songs_to_sort)
+
+                // check if there are min num songs left, else update songs to sort
+                if (all_song_ids.length < this.min_songs_in_bag) {
+                    await this.updateSongsToSort()
+                    all_song_ids = Object.keys(this.songs_to_sort)
+                }
+
+                random_song_id = all_song_ids[Math.floor(Math.random() * all_song_ids.length)]
+            }
+
             this.curr_track = null
-
-            var all_song_ids = Object.keys(this.songs_to_sort)
-            var random_song_id = all_song_ids[Math.floor(Math.random() * all_song_ids.length)]
-
             await this.loadNewTrack(random_song_id)
+
             return
         },
         async saveSelection() {
             // saves sorting selection to firebase
             this.prev_track_id = this.curr_track.id
+            this.prev_track_was_saved = true
 
             var song_id_to_push = this.curr_track.id
             
@@ -558,11 +589,6 @@ export default {
 
             // remove from songs_to_sort
             delete this.songs_to_sort[this.curr_track.id]
-
-            // check if any songs left
-            if (Object.keys(this.songs_to_sort).length === 0) {
-                await this.updateSongsToSort(50)
-            }
 
             // load new track
             await this.loadRandomTrack()
@@ -614,7 +640,9 @@ export default {
             // load previous track
             await this.loadNewTrack(this.prev_track_id)
 
-            this.num_songs_sorted -= 1
+            if (this.prev_track_was_saved) {
+                this.num_songs_sorted -= 1
+            }
 
             if (!this.isMobile) {
                 // Load the new track URI
@@ -627,6 +655,7 @@ export default {
             }
 
             this.prev_track_id = null
+            this.prev_track_was_saved = false
         },
         async pushSortedSongsToSpotify() {
             // push sorted songs to spotify playlists
@@ -842,6 +871,8 @@ export default {
         async searchForThisSong(track_id) {
             this.searchModal.hide()
             this.prev_track_id = this.curr_track.id
+            this.prev_track_was_saved = false
+
             await this.loadNewTrack(track_id)
 
             if (!this.isMobile) {
@@ -896,6 +927,24 @@ export default {
                 SpotifyApiUtils.queueTrack(this.curr_track.id)
             }
         },
+        async shuffleToNewSong() {
+            // set prev track id
+            this.prev_track_id = this.curr_track.id
+            this.prev_track_was_saved = false
+
+            // load new track
+            await this.loadRandomTrack()
+
+            if (!this.isMobile) {
+                // Load the new track URI
+                window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
+    
+                window.EmbedController.play();
+            } else {
+                // Play from spotify account
+                await SpotifyApiUtils.queueTrack(this.curr_track.id)
+            }
+        }
     },
     async mounted() {
         if (window.onSpotifyIframeApiReady) {
@@ -958,12 +1007,12 @@ export default {
             }
         }
 
-        await this.updateSongsToSort(50)
+        await this.updateSongsToSort()
 
         // Check if Spotify already playing songs. If yes, load the currently playing song
         var curr_playback_data = await SpotifyApiUtils.getPlaybackState()
 
-        if (curr_playback_data !== '') {
+        if (curr_playback_data !== '' && curr_playback_data.is_playing) {
             // Load currently playing song
             var song_to_load = curr_playback_data.item.id
 

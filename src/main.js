@@ -9,10 +9,10 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 /* import specific icons */
-import { faArrowRight, faBackward, faCircleCheck, faCirclePlus, faCircleQuestion, faFloppyDisk, faForward, faGear, faHandPointer, faListUl, faMagnifyingGlass, faMusic, faPause, faPlay, faSpinner, faUserCircle, faVolumeHigh } from '@fortawesome/free-solid-svg-icons'
+import { faArrowRight, faBackward, faCircleCheck, faCirclePlus, faCircleQuestion, faFloppyDisk, faForward, faGear, faHandPointer, faListUl, faMagnifyingGlass, faMusic, faPause, faPlay, faShuffle, faSpinner, faThumbsUp, faUserCircle, faVolumeHigh } from '@fortawesome/free-solid-svg-icons'
 
 /* add icons to the library (ADD NEW ICONS HERE v) */
-library.add(faSpinner, faArrowRight, faMusic, faListUl, faHandPointer, faSpotify, faUserCircle, faCircleQuestion, faFloppyDisk, faCircleCheck, faCirclePlus, faMagnifyingGlass, faPlay, faPause, faForward, faBackward, faVolumeHigh, faGear)
+library.add(faSpinner, faArrowRight, faMusic, faListUl, faHandPointer, faSpotify, faUserCircle, faCircleQuestion, faFloppyDisk, faCircleCheck, faCirclePlus, faMagnifyingGlass, faPlay, faPause, faForward, faBackward, faVolumeHigh, faGear, faThumbsUp, faShuffle)
 
 import "bootstrap/dist/css/bootstrap.min.css"
 import "bootstrap"
