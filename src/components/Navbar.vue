@@ -7,7 +7,7 @@ import { RouterLink } from 'vue-router'
         <div class="container-fluid">
             <a class="navbar-brand p-0">
                 <RouterLink to="/" class="navbar-item m-0">
-                    <img class="logo p-1" src="../assets/logos/Main Logo/SVG/main_logo_color_light.svg" width="200" />
+                    <img class="logo py-1 pe-5 pe-md-0" src="../assets/logos/Main Logo/SVG/main_logo_color_light.svg" width="200" />
                 </RouterLink>
             </a>
 
