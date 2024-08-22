@@ -234,6 +234,6 @@ export default {
 <style scoped>
 #canvasContainer {
     width: 100%;
-    height: 100%;
+    height: 50%;
 }
 </style>
