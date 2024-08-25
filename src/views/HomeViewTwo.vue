@@ -1,19 +1,16 @@
 <template>
-    <div ref="canvasContainer" id="canvasContainer"></div>
-    <div>
-        <h1>Test test test</h1>
-        <h1>Test test test</h1>
-        <h1>Test test test</h1>
-        <h1>Test test test</h1>
-        <h1>Test test test</h1>
-        <h1>Test test test</h1>
-        <h1>Test test test</h1>
+    <div ref="canvasContainer" id="canvasContainer" class="bg-light">
+        <div id="innerCanvasHome" class="py-3 ps-4 mt-5">
+            <div>
+                <h1 class="mb-4">Do Your Spotify Playlists Look Like This?</h1>
+                <p>Dont be a lazy piece of shit and start sorting your Spotify playlist today you lazy motherfucker</p>
+            </div>
+        </div>
     </div>
 </template>
   
 <script>
 import Matter from 'matter-js';
-// Basic setup for Matter.js
 const { Engine, Render, Runner, Bodies, World, Mouse, MouseConstraint, Composite, Composites } = Matter;
 
 import testimg from '../assets/logos/Favicon/SVG/favicon_color.svg'
@@ -40,13 +37,13 @@ export default {
             
             // Settings
             const THICCNESS = 1000;
-            var e_body_size = 35;
             var num_rows = 7;
             var num_cols = 11;
-            var pyramid_x = (matterContainer.clientWidth / 2) - (num_cols * e_body_size);
-            var pyramid_x_end = (matterContainer.clientWidth / 2) + (num_cols * e_body_size);
+            var e_body_size = matterContainer.clientWidth / 4 / num_cols;
+            var pyramid_x = (matterContainer.clientWidth) - (num_cols * e_body_size * 2);
+            var pyramid_x_end = matterContainer.clientWidth;
             var pyramid_y = (matterContainer.clientHeight) - (num_rows * e_body_size * 2);
-            var holder_size = 100;
+            var holder_size = 50;
 
             // Set gravity
             engine.gravity.scale = 0.001;
@@ -207,12 +204,12 @@ export default {
 
             // Adding a pyramid of bodies
             const pyramid = Composites.pyramid(pyramid_x, pyramid_y, num_cols, num_rows , 0, 0, (x, y) => {
-                const e_body =  Bodies.polygon(x, y, 8, e_body_size, {
+                const e_body =  Bodies.circle(x, y, e_body_size, {
                     render: {
                         sprite: {
                             texture: testimg,
-                            xScale: 0.5,
-                            yScale: 0.5,
+                            xScale: 0.4,
+                            yScale: 0.4,
                         },
                         friction: 0.5,
                     },
@@ -234,6 +231,19 @@ export default {
 <style scoped>
 #canvasContainer {
     width: 100%;
-    height: 50%;
+    height: 400px;
+    position: relative;
+}
+
+#innerCanvasHome {
+    position: absolute;
+    width: 50%;
+}
+
+/* Override for mobile devices */
+@media (max-width: 768px) {
+    #canvasContainer {
+        height: 300px;
+    }
 }
 </style>

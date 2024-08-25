@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeViewTwo.vue' // Change back to HomeView when done
+import HomeView from '../views/HomeView.vue' // Change back to HomeViewTwo to test new home page
 import AppView from '../views/AppView.vue'
 import AccountAuthorizeView from '../views/AuthorizationEndpointView.vue'
 import PlaylistSelectView from '../views/PlaylistSelectView.vue'
