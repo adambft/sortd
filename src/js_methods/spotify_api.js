@@ -330,6 +330,11 @@ export const SpotifyApiUtils = {
 
         // add only the track's id to the result
         tracks.forEach(element => {
+            // Skips if it is an Episode
+            if (element.track.type == 'episode') {
+                return;
+            }
+
             res_tracks.add(element.track.id);
         });
 
@@ -340,6 +345,11 @@ export const SpotifyApiUtils = {
             var tracks = await this.getPlaylistTracks(playlist_id, num_tracks, offset);
 
             tracks.forEach(element => {
+                // Skips if it is an Episode
+                if (element.track.type == 'episode') {
+                    return;
+                }
+
                 res_tracks.add(element.track.id);
             });
 
@@ -429,6 +439,11 @@ export const SpotifyApiUtils = {
         // Build result with track data
         for (var i = 0; i < tracks.length; i++) {
             var e_track = tracks[i];
+
+            // Check if it is an Episode and skip if it is
+            if (e_track.track.type == 'episode') {
+                continue;
+            }
 
             var track_id = e_track.track.id;
 
@@ -679,12 +694,15 @@ export const SpotifyApiUtils = {
         // Check current playback status
         var curr_playback_state = await this.getPlaybackState();
 
-        var curr_track_id = curr_playback_state.item.id;
-        var is_playing = curr_playback_state.is_playing;
+        // Check if intended track is already playing (only for Track type)
+        if (curr_playback_state.currently_playing_type == 'track') {
+            var curr_track_id = curr_playback_state.item.id;
+            var is_playing = curr_playback_state.is_playing;
 
-        // If intended track is already there AND playing, don't queue
-        if (curr_track_id == track_id && is_playing) {
-            return true;
+            // If intended track is already there AND playing, don't queue
+            if (curr_track_id == track_id && is_playing) {
+                return true;
+            }
         }
 
         // Figure out when to start track

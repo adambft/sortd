@@ -333,6 +333,22 @@
             </div>
         </div>
     </div>
+
+    <!-- episode detected modal -->
+    <div class="modal fade" tabindex="-1" id="episodeDetectedModal" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">You are currently playing a podcast episode</h5>
+                </div>
+
+                <div class="modal-body">
+                    <p>Sort'd isn't able to sort podcast episodes, only songs. Would you like to skip to a song to sort?</p>
+                    <button class="btn btn-success" @click="skipOverCurEpisode()">Yes, skip to song</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>
 
 
@@ -350,14 +366,11 @@ export default {
             artists_info: null,
             all_lastfm_genres: null,
             songs_to_sort: {},
-            del_modal: null,
             prev_track_id: null,
             prev_track_was_saved: false,
             total_num_songs: 0,
             num_songs_sorted: 0,
-            save_confirm_modal: null,
             playlists_pushed: [],
-            export_progress_modal: null,
             new_playlists: [
                 {
                     name: "",
@@ -365,14 +378,21 @@ export default {
                 }
             ],
             add_pl_error_msg: "",
-            add_playlist_modal: null,
-            searchModal: null,
             searchResults: [],
             searchQuery: "",
             isMobile: false,
             newSongsTotalNum: null,
             newSongsAddedNum: null,
             songBeingAdded: null,
+
+            // Modals
+            del_modal: null,
+            save_confirm_modal: null,
+            export_progress_modal: null,
+            adding_new_songs_modal: null,
+            add_playlist_modal: null,
+            search_modal: null,
+            episode_detected_modal: null,
 
             // Playback variables
             curr_playback_name: null,
@@ -622,6 +642,14 @@ export default {
             // Check if user really wants to save
             this.save_confirm_modal.show()
         },
+        openEpisodeDetectedModal(to_open=true) {
+            // Check if user wants to skip over episode to track
+            if (to_open) {
+                this.episode_detected_modal.show()
+            } else {
+                this.episode_detected_modal.hide()
+            }
+        },
         async checkPlaylistBeforeSave () {
             // check if any playlist is selected
             for (let i = 0; i < this.user_playlists.length; i++) {
@@ -844,7 +872,7 @@ export default {
             this.add_playlist_modal.show()
         },
         openSearchModal() {
-            this.searchModal.show()
+            this.search_modal.show()
         },
         async searchForSongs() {
             var search_results = await SpotifyApiUtils.searchAll(this.searchQuery, 10)
@@ -869,7 +897,7 @@ export default {
             return all_artists
         },
         async searchForThisSong(track_id) {
-            this.searchModal.hide()
+            this.search_modal.hide()
             this.prev_track_id = this.curr_track.id
             this.prev_track_was_saved = false
 
@@ -944,6 +972,108 @@ export default {
                 // Play from spotify account
                 await SpotifyApiUtils.queueTrack(this.curr_track.id)
             }
+        },
+        async skipOverCurEpisode() {
+            // Skip over current episode to a random song
+            await this.loadRandomTrack()
+            this.setupPlayers()
+            this.openEpisodeDetectedModal(false)
+        },
+        setupPlayers() {
+            // Spotify Player [Play in Browser] ========================================================== [START]
+            const playerScript = document.createElement('script');
+            playerScript.src = 'https://open.spotify.com/embed/iframe-api/v1';
+            playerScript.async = true;
+
+            document.body.appendChild(playerScript);
+
+            window.onSpotifyIframeApiReady = (IFrameAPI) => {
+                const element = document.getElementById('embed-iframe');
+                const options = {
+                    uri: `spotify:track:${this.curr_track.id}`
+                    };
+                const callback = (EmbedController) => {
+                    // Set EmbedController as a global variable for later use
+                    window.EmbedController = EmbedController;
+                };
+                IFrameAPI.createController(element, options, callback);
+            };
+            // Spotify Player ========================================================== [END]
+
+
+            // Spotify SDK Player [Remote Controller] ========================================================== [START]
+            const SDKplayerScript = document.createElement('script');
+            SDKplayerScript.src = 'https://sdk.scdn.co/spotify-player.js';
+            SDKplayerScript.async = true;
+
+            document.body.appendChild(SDKplayerScript);
+            
+            window.onSpotifyWebPlaybackSDKReady = () => {
+                const token = localStorage.getItem('accessToken');
+                const player = new Spotify.Player({
+                    name: 'Adambft Spotify Sorter',
+                    getOAuthToken: cb => { cb(token); },
+                    volume: 0.5
+                });
+
+                // Ready
+                player.addListener('ready', async ({ device_id }) => {
+                    console.log('Ready with Device ID', device_id);
+                    localStorage.setItem('spotifyDeviceId', device_id)
+
+                    // Get currently playing device's ID and save to vue variables
+                    var curr_playback_data = await SpotifyApiUtils.getPlaybackState()
+
+                    // Check if playback data is empty (ie. No devices connected rn)
+                    if (curr_playback_data == '') {
+                        // No devices connected right now
+                        this.curr_playback_name = "This Browser"
+                        this.secondary_playback_id = null
+                        this.curr_playing_here = true
+                        this.secondary_playback_name = null
+
+                        await SpotifyApiUtils.transferPlaybackToBrowser()
+
+                        // Wait 1 second to ensure transfer is done
+                        await new Promise(r => setTimeout(r, 1000));
+                    } else {
+                        this.secondary_playback_id = curr_playback_data.device.id
+                        this.curr_playback_name = curr_playback_data.device.name
+                        this.curr_playing_here = false
+                        this.secondary_playback_name = curr_playback_data.device.name
+                    }
+
+                    // Queue track
+                    await SpotifyApiUtils.queueTrack(this.curr_track.id)
+                });
+
+                // Not Ready
+                player.addListener('not_ready', ({ device_id }) => {
+                    console.log('Device ID has gone offline', device_id);
+                });
+
+                player.addListener('initialization_error', ({ message }) => {
+                    console.error(message);
+                });
+
+                player.addListener('authentication_error', ({ message }) => {
+                    console.error(message);
+                });
+
+                player.addListener('account_error', ({ message }) => {
+                    console.error(message);
+                });
+
+                document.getElementById('playButton').onclick = function() {
+                    player.resume();
+                };
+
+                document.getElementById('pauseButton').onclick = function() {
+                    player.pause();
+                };
+
+                player.connect();
+            }
         }
     },
     async mounted() {
@@ -982,7 +1112,11 @@ export default {
             keyboard: false
         })
 
-        this.searchModal = new bootstrap.Modal(document.getElementById('searchModal'), {
+        this.search_modal = new bootstrap.Modal(document.getElementById('searchModal'), {
+            keyboard: false
+        })
+
+        this.episode_detected_modal = new bootstrap.Modal(document.getElementById('episodeDetectedModal'), {
             keyboard: false
         })
         // set up modals ========================================================== [END]
@@ -1013,108 +1147,22 @@ export default {
         var curr_playback_data = await SpotifyApiUtils.getPlaybackState()
 
         if (curr_playback_data !== '' && curr_playback_data.is_playing) {
-            // Load currently playing song
-            var song_to_load = curr_playback_data.item.id
+            // Load currently playing song, skip if episode
 
-            await this.loadNewTrack(song_to_load)
+            if (curr_playback_data.item !== null && curr_playback_data.item.type === 'track') {
+                var song_to_load = curr_playback_data.item.id
+    
+                await this.loadNewTrack(song_to_load)
+                this.setupPlayers()
+            } else {
+                // Load random track
+                this.openEpisodeDetectedModal()
+            }
+
         } else {
             // Load random track
             await this.loadRandomTrack()
-        }
-
-        // Spotify Player [Play in Browser] ========================================================== [START]
-        const playerScript = document.createElement('script');
-        playerScript.src = 'https://open.spotify.com/embed/iframe-api/v1';
-        playerScript.async = true;
-
-        document.body.appendChild(playerScript);
-
-        window.onSpotifyIframeApiReady = (IFrameAPI) => {
-            const element = document.getElementById('embed-iframe');
-            const options = {
-                uri: `spotify:track:${this.curr_track.id}`
-                };
-            const callback = (EmbedController) => {
-                // Set EmbedController as a global variable for later use
-                window.EmbedController = EmbedController;
-            };
-            IFrameAPI.createController(element, options, callback);
-        };
-        // Spotify Player ========================================================== [END]
-
-
-        // Spotify SDK Player [Remote Controller] ========================================================== [START]
-        const SDKplayerScript = document.createElement('script');
-        SDKplayerScript.src = 'https://sdk.scdn.co/spotify-player.js';
-        SDKplayerScript.async = true;
-
-        document.body.appendChild(SDKplayerScript);
-        
-        window.onSpotifyWebPlaybackSDKReady = () => {
-            const token = localStorage.getItem('accessToken');
-            const player = new Spotify.Player({
-                name: 'Adambft Spotify Sorter',
-                getOAuthToken: cb => { cb(token); },
-                volume: 0.5
-            });
-
-            // Ready
-            player.addListener('ready', async ({ device_id }) => {
-                console.log('Ready with Device ID', device_id);
-                localStorage.setItem('spotifyDeviceId', device_id)
-
-                // Get currently playing device's ID and save to vue variables
-                var curr_playback_data = await SpotifyApiUtils.getPlaybackState()
-
-                // Check if playback data is empty (ie. No devices connected rn)
-                if (curr_playback_data == '') {
-                    // No devices connected right now
-                    this.curr_playback_name = "This Browser"
-                    this.secondary_playback_id = null
-                    this.curr_playing_here = true
-                    this.secondary_playback_name = null
-
-                    await SpotifyApiUtils.transferPlaybackToBrowser()
-
-                    // Wait 1 second to ensure transfer is done
-                    await new Promise(r => setTimeout(r, 1000));
-                } else {
-                    this.secondary_playback_id = curr_playback_data.device.id
-                    this.curr_playback_name = curr_playback_data.device.name
-                    this.curr_playing_here = false
-                    this.secondary_playback_name = curr_playback_data.device.name
-                }
-
-                // Queue track
-                await SpotifyApiUtils.queueTrack(this.curr_track.id)
-            });
-
-            // Not Ready
-            player.addListener('not_ready', ({ device_id }) => {
-                console.log('Device ID has gone offline', device_id);
-            });
-
-            player.addListener('initialization_error', ({ message }) => {
-                console.error(message);
-            });
-
-            player.addListener('authentication_error', ({ message }) => {
-                console.error(message);
-            });
-
-            player.addListener('account_error', ({ message }) => {
-                console.error(message);
-            });
-
-            document.getElementById('playButton').onclick = function() {
-                player.resume();
-            };
-
-            document.getElementById('pauseButton').onclick = function() {
-                player.pause();
-            };
-
-            player.connect();
+            this.setupPlayers()
         }
     }
 };
