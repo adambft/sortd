@@ -21,7 +21,7 @@ const base64encode = (input) => {
         .replace(/\//g, '_');
 }
 
-const redirectUri = 'https://adambft-spotify-playlist-sorter.vercel.app/account_authorize';
+const redirectUri = 'https://sortd.vercel.app/account_authorize';
 // const redirectUri = 'http://localhost:5173/account_authorize'; // for local testing
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[end]
 
