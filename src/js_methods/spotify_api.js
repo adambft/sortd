@@ -123,6 +123,14 @@ export const SpotifyApiUtils = {
             if (minutesDifference < 55) {
                 return true;
             }
+
+            // Refresh access token with refresh token
+            try {
+                await this.getRefreshToken();
+                return true;
+            } catch (error) {
+                // Do nothing, continue to requestAccountAccess()
+            }
         }
 
         localStorage.setItem('awaiting_access_token_update', true);
@@ -157,6 +165,48 @@ export const SpotifyApiUtils = {
 
             // reload to force navbar to update
             window.location.reload();
+        }
+    },
+
+    async getRefreshToken() {
+        // refresh token that has been previously stored
+        const refreshToken = localStorage.getItem('refreshToken');
+        const url = "https://accounts.spotify.com/api/token";
+
+        const payload = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token: refreshToken,
+                client_id: import.meta.env.VITE_SPOTIFY_CLIENT_ID
+            }),
+        }
+
+        // Try to send request for new token, catch errors if any
+        try {
+            const body = await fetch(url, payload);
+            const response = await body.json();
+
+            console.log('Response from getRefreshToken(): ', response)
+
+            // Check if response is an error
+            if (response.error) {
+                console.error("Error in running getRefreshToken(): ", response.error, response.error_description);
+                throw response.error;
+            }
+    
+            // Store new access token & refresh token
+            localStorage.setItem('accessToken', response.access_token);
+            
+            if (response.refresh_token) {
+                localStorage.setItem('refreshToken', response.refresh_token);
+            }
+        } catch (error) {
+            console.error("Error in running getRefreshToken(): ", error);
+            throw error;
         }
     },
     
