@@ -190,8 +190,6 @@ export const SpotifyApiUtils = {
             const body = await fetch(url, payload);
             const response = await body.json();
 
-            console.log('Response from getRefreshToken(): ', response)
-
             // Check if response is an error
             if (response.error) {
                 console.error("Error in running getRefreshToken(): ", response.error, response.error_description);
