@@ -255,14 +255,22 @@
                     return
                 }
 
-                await firebase.writeDb(`${localStorage.getItem('spotifyUserId')}/new_playlists`, new_pl)
-                await firebase.writeDb(`${localStorage.getItem('spotifyUserId')}/sorted_songs`, '')
+                await firebase.writeToNewPlaylists(new_pl)
+                await firebase.writeToSortedSongs('')
                 this.$router.push('/app/sort')
             }
         },
         async mounted() {
+            // Check if user is logged in to Firebase already. If not, redirect to /app
+            if (!await firebase.isUserLoggedIn()) {
+                this.$router.push('/app')
+                return
+            }
+
+            // Check if user is logged in to Spotify
+            await SpotifyApiUtils.updateAccessToken()
+
             var temp_user_playlists = await SpotifyApiUtils.getAllPlaylists()
-            await SpotifyApiUtils.getUserId()
 
             // Remove playlists that already have tracks added (aka only take playlists that are empty)
             for (var i = 0; i < temp_user_playlists.length; i++) {

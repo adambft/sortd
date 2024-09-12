@@ -155,7 +155,6 @@
                 this.showLoadingModal()
 
                 let playlists_to_add = this.user_playlists
-
                 .filter(obj => obj.to_add === true)
                 .map(obj => {
                     let newObj = { ...obj };
@@ -168,7 +167,7 @@
                 })
                 .reduce((acc, obj) => ({ ...acc, ...obj }), {}); // Merge objects into a single object
 
-                await firebase.writeDb(`${localStorage.getItem('spotifyUserId')}/curr_playlists`, playlists_to_add)
+                await firebase.writeToCurrPlaylists(playlists_to_add)
 
                 // process each playlist's tracks to db
                 for (let pl_id in playlists_to_add) {
@@ -249,12 +248,19 @@
             },
         },
         async mounted() {
+            // Check if user is logged in to Firebase already. If not, redirect to /app
+            if (!await firebase.isUserLoggedIn()) {
+                this.$router.push('/app')
+                return
+            }
+
+            // Check if user is logged in to Spotify
+            await SpotifyApiUtils.updateAccessToken()
+
             var temp_user_playlists = await SpotifyApiUtils.getAllPlaylists()
 
             // Filter out playlists with 0 songs
             this.user_playlists = temp_user_playlists.filter(obj => obj.tracks.total > 0)
-
-            await SpotifyApiUtils.getUserId()
 
             for (let key in this.user_playlists) {
                 this.user_playlists[key]["to_add"] = false;

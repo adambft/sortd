@@ -21,8 +21,8 @@ const base64encode = (input) => {
         .replace(/\//g, '_');
 }
 
-const redirectUri = 'https://sortd.vercel.app/account_authorize';
-// const redirectUri = 'http://localhost:5173/account_authorize'; // for local testing
+// const redirectUri = 'https://sortd.vercel.app/account_authorize';
+const redirectUri = 'http://localhost:5173/account_authorize'; // for local testing
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[end]
 
 
@@ -153,14 +153,12 @@ export const SpotifyApiUtils = {
             localStorage.setItem('accessTokenTime', Date.now());
             localStorage.removeItem('awaiting_access_token_update');
 
-            var user_spotify_id = await this.getUserId();
-
             // check if user account already created
-            var existing_db_data = await firebase.readDb(`${user_spotify_id}`);
+            var existing_db_data = await firebase.readAllAccountData();
 
             if (existing_db_data == null) {
                 // create new user account
-                await firebase.writeDb(`${user_spotify_id}`, '')
+                await firebase.createNewBlankUser();
             }
 
             // reload to force navbar to update
@@ -250,6 +248,12 @@ export const SpotifyApiUtils = {
             // If there is no code or error in the url, then return false (use this to redirect to home page)
             return false
         }
+    },
+
+    logout() {
+        // Log out user
+        localStorage.clear();
+        localStorage.setItem('userLoggedOut', true);
     },
 
     async getUserId() {
@@ -558,7 +562,7 @@ export const SpotifyApiUtils = {
         }
 
         // Fetch existing data from db
-        var existing_db_data = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/songs_selected`);
+        var existing_db_data = await firebase.readSongsSelected();
 
         if (existing_db_data == null) {
             existing_db_data = {};
@@ -568,7 +572,7 @@ export const SpotifyApiUtils = {
         var merged_data = mergeTrackObjects(existing_db_data, res_to_db);
 
         // Push back to db
-        await firebase.writeDb(`${localStorage.getItem('spotifyUserId')}/songs_selected`, merged_data);
+        await firebase.writeToSongsSelected(merged_data);
 
         return tracks.length;
     },
@@ -620,8 +624,7 @@ export const SpotifyApiUtils = {
         res_to_db.valence = audio_features.valence;
         
         // push to db
-        var user_id = await this.getUserId();
-        await firebase.writeDb(`${user_id}/songs_selected/${track_id}`, res_to_db);
+        await firebase.writeToSongsSelectedSpecificTrack(track_id, res_to_db);
 
         return true;
     },
@@ -923,7 +926,7 @@ export const SpotifyApiUtils = {
         await this.updateAccessToken();
 
         // get all users songs
-        var all_songs = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/songs_selected`);
+        var all_songs = await firebase.readSongsSelected();
 
         try {
             const response = await axios.get(`https://api.spotify.com/v1/search?q=${query}&type=track&limit=${limit}`, {
@@ -955,7 +958,7 @@ export const SpotifyApiUtils = {
     async searchForTrackInLibrary(query, add_in_library_property=false) {
         // search for a track in the users existing songs
 
-        var all_songs = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/songs_selected`);
+        var all_songs = await firebase.readSongsSelected();
 
         var track_ids = [];
 

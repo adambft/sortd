@@ -18,11 +18,20 @@ export default {
   },
   async mounted() {
     this.error_msg = null
+
+    // check if user is logged in to Firebase
+    if (!await firebase.isUserLoggedIn()) {
+      // If user not logged in, redirect to login page (seems like browser does not allow auto login with router.push)
+      this.$router.push({ path: '/login' })
+      return
+    }
+
+    // check if user is logged in to Spotify
     await SpotifyApiUtils.updateAccessToken()
 
     // check user data in firebase
-    var user_data = await firebase.readDb(`/${localStorage.getItem('spotifyUserId')}`)
-
+    var user_data = await firebase.readAllAccountData();
+    
     if (!user_data.hasOwnProperty('curr_playlists') || !user_data.hasOwnProperty('songs_selected')) {
       this.$router.push({ path: 'app/playlist_select' })
     } else if (!user_data.hasOwnProperty('new_playlists')) {

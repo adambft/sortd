@@ -1,9 +1,11 @@
 <script setup>
+import { SpotifyApiUtils } from '@/js_methods/spotify_api';
 import { RouterLink } from 'vue-router'
+import * as firebase from '../js_methods/firebase';
 </script>
 
 <template>
-    <nav class="navbar navbar-expand-lg">
+    <nav class="navbar navbar-expand-lg bg-success">
         <div class="container-fluid">
             <a class="navbar-brand p-0">
                 <RouterLink to="/" class="navbar-item m-0">
@@ -68,17 +70,12 @@ export default {
         },
     },
     methods: {
-        logUserOut() {
-            localStorage.removeItem('awaiting_access_token_update');
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('scope');
-            localStorage.removeItem('accessTokenTime');
-            localStorage.removeItem('codeVerifier');
-            localStorage.removeItem('spotifyUserId');
-
-            localStorage.setItem('userLoggedOut', true)
+        async logUserOut() {
+            SpotifyApiUtils.logout();
+            await firebase.logout();
+            
             this.$router.push({ path: '/' })
+            location.reload();
         },
     }
 }
@@ -86,7 +83,6 @@ export default {
 
 <style scoped>
 .navbar {
-    background-color: #06BE4B;
     padding: 1rem 2rem;
     display: flex;
     justify-content: space-between;
@@ -102,11 +98,11 @@ export default {
 }
 
 .navbar-item:hover {
-    color: #096029;
+    color: #023013;
 }
 
 .router-link-active {
-    color: #096029;
+    color: #023013;
 }
 
 </style>

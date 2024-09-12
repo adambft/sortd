@@ -8,7 +8,7 @@ import * as firebase from '../js_methods/firebase'
 export default {
     methods: {
         async del_account() {
-            await firebase.writeDb(`/${localStorage.getItem('spotifyUserId')}`, null)
+            await firebase.deleteAllSpotifyAccountData();
 
             localStorage.removeItem('awaiting_access_token_update');
             localStorage.removeItem('accessToken');

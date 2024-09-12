@@ -469,7 +469,7 @@ export default {
             this.all_lastfm_genres = await LastFmApiUtils.getTrackTags(this.first_artist, this.curr_track.name, 10)
 
             // update any current playlist selections
-            var sorted_data = await firebase.readDb(`/${localStorage.getItem('spotifyUserId')}/sorted_songs/${track_id}`)
+            var sorted_data = await firebase.readSortedSongsSpecificTrack(track_id)
             
             this.resetPlaylistSelection()
 
@@ -488,8 +488,8 @@ export default {
         },
         async updateSongsToSort(limit=this.num_songs_to_sort) {
 
-            var all_user_songs = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/songs_selected`)
-            var sorted_songs = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/sorted_songs`)
+            var all_user_songs = await firebase.readSongsSelected()
+            var sorted_songs = await firebase.readSortedSongs()
 
             
             if (sorted_songs === "" || sorted_songs === null) {
@@ -573,14 +573,14 @@ export default {
             if (this.songs_to_sort.hasOwnProperty(song_id_to_push)) {
                 song_data = this.songs_to_sort[song_id_to_push]
             } else {
-                song_data = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/songs_selected/${song_id_to_push}`)
+                song_data = await firebase.readSongsSelectedSpecificTrack(song_id_to_push)
             }
 
             // add track to firebase (songs_selected) if not in frebase already
             if (song_data === null) {
                 this.total_num_songs += 1
                 await SpotifyApiUtils.pushSingleTrackToDb(song_id_to_push)
-                song_data = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/songs_selected/${song_id_to_push}`)
+                song_data = await firebase.readSongsSelectedSpecificTrack(song_id_to_push)
             }
 
             for (let i = 0; i < this.user_playlists.length; i++) {
@@ -604,7 +604,7 @@ export default {
             song_data['lastfm_tags'] = lastfm_tags
 
             // push to firebase
-            firebase.writeDb(`${localStorage.getItem('spotifyUserId')}/sorted_songs/${this.curr_track.id}`, song_data)
+            firebase.writeToSortedSongsSpecificTrack(this.curr_track.id, song_data)
             this.num_songs_sorted += 1
 
             // remove from songs_to_sort
@@ -694,8 +694,8 @@ export default {
             // wait 1 second to ensure modal is shown
             await new Promise(r => setTimeout(r, 1000));
 
-            var sorted_songs = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/sorted_songs`)
-            var all_user_songs = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/songs_selected`)
+            var sorted_songs = await firebase.readSortedSongs()
+            var all_user_songs = await firebase.readSongsSelected()
 
             var songs_by_playlist = {}
             var newly_added_songs = {}
@@ -788,7 +788,7 @@ export default {
                         playlists_obj[e_pl_id] = true
                     });
     
-                    firebase.writeDb(`${localStorage.getItem('spotifyUserId')}/sorted_songs/${track_id}`, playlists_obj)
+                    firebase.writeToSortedSongsSpecificTrack(track_id, playlists_obj)
                 }
     
                 this.adding_new_songs_modal.hide()
@@ -857,7 +857,7 @@ export default {
             }
 
             // Add new playlists to firebase
-            await firebase.writeDb(`${localStorage.getItem('spotifyUserId')}/new_playlists`, this.user_playlists)
+            await firebase.writeToNewPlaylists(this.user_playlists)
 
             // Reset modal and variables
             this.add_playlist_modal.hide()
@@ -1077,6 +1077,16 @@ export default {
         }
     },
     async mounted() {
+        // Check if user is logged in to Firebase already. If not, redirect to /app
+        if (!await firebase.isUserLoggedIn()) {
+            this.$router.push('/app')
+            return
+        }
+
+        // Check if user is logged in to Spotify
+        await SpotifyApiUtils.updateAccessToken()
+
+
         if (window.onSpotifyIframeApiReady) {
             window.location.reload();
         }
@@ -1122,7 +1132,7 @@ export default {
         // set up modals ========================================================== [END]
 
         await SpotifyApiUtils.getUserId()
-        var get_temp_playlists = await firebase.readDb(`${localStorage.getItem('spotifyUserId')}/new_playlists`)
+        var get_temp_playlists = await firebase.readNewPlaylists()
 
         var user_selected_playlists = new Set()
 
