@@ -55,18 +55,13 @@ export default {
     },
     computed: {
         userLoggedIn() {
-            if (!localStorage.getItem('accessToken')) {
+            if (!firebase.isUserLoggedIn()) {
                 return false
+            } else if (!localStorage.getItem('accessToken')) {
+                return false
+            } else {
+                return true
             }
-
-            const accessTokenTime = localStorage.getItem('accessTokenTime');
-            const currentTime = Date.now();
-            const timeDifference = currentTime - accessTokenTime;
-            const minutesDifference = timeDifference / 60000;
-
-            if (minutesDifference < 55) {
-                return true;
-            } else { return false }
         },
     },
     methods: {
@@ -75,6 +70,8 @@ export default {
             await firebase.logout();
             
             this.$router.push({ path: '/' })
+            
+            // Reload needed to update userLoggedIn computed property
             location.reload();
         },
     }
