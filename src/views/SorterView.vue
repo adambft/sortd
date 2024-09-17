@@ -1011,7 +1011,7 @@ export default {
             window.onSpotifyWebPlaybackSDKReady = () => {
                 const token = localStorage.getItem('accessToken');
                 const player = new Spotify.Player({
-                    name: 'Adambft Spotify Sorter',
+                    name: 'Sort\'d Player',
                     getOAuthToken: cb => { cb(token); },
                     volume: 0.5
                 });
