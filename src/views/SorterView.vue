@@ -1145,10 +1145,6 @@ export default {
         for (let i = 0; i < all_user_playlists_temp.length; i++) {
             let e_playlist = all_user_playlists_temp[i]
 
-            if (e_playlist == null) {
-                continue
-            }
-
             if (user_selected_playlists.has(e_playlist.id)) {
                 e_playlist['to_add'] = false
                 this.user_playlists.push(e_playlist)

@@ -302,7 +302,7 @@ export const SpotifyApiUtils = {
 
             return playlists;
         } catch (error) {
-            console.error("Error in running getAllPlaylists(): ", error);
+            console.error("Error in running getPlaylists(): ", error);
             throw error;
         }
     },
@@ -320,6 +320,9 @@ export const SpotifyApiUtils = {
             offset += num_playlists;
             num_playlists_returned = playlists.length;
         }
+
+        // Remove any null values in res_playlists
+        res_playlists = res_playlists.filter(e_playlist => e_playlist != null);
 
         return res_playlists;
     },
