@@ -415,27 +415,6 @@ export const SpotifyApiUtils = {
         return res_tracks;
     },
 
-    async getTracksAudioFeatures(track_ids) {
-        // Get audio features of a track
-
-        await this.updateAccessToken();
-
-        try {
-            const response = await axios.get(`https://api.spotify.com/v1/audio-features?ids=${track_ids}`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-                }
-            });
-
-            var audio_features = response.data.audio_features;
-
-            return audio_features;
-        } catch (error) {
-            console.error("Error in running getTracksAudioFeatures(): ", error);
-            throw error;
-        }
-    },
-
     async getOneTrack(track_id) {
         // Get one track
 
@@ -529,41 +508,6 @@ export const SpotifyApiUtils = {
             track_ids.push(track_id);
         }
 
-        // Build result with audio features
-        var audio_features = await this.getTracksAudioFeatures(track_ids.join(','))
-
-        for (var i = 0; i < audio_features.length; i++) {
-            var e_audio_feature = audio_features[i];
-
-            var track_id = e_audio_feature.id;
-            
-            var acousticness = e_audio_feature.acousticness;
-            var danceability = e_audio_feature.danceability;
-            var energy = e_audio_feature.energy;
-            var instrumentalness = e_audio_feature.instrumentalness;
-            var key = e_audio_feature.key;
-            var liveness = e_audio_feature.liveness;
-            var loudness = e_audio_feature.loudness;
-            var mode = e_audio_feature.mode;
-            var speechiness = e_audio_feature.speechiness;
-            var tempo = e_audio_feature.tempo;
-            var time_signature = e_audio_feature.time_signature;
-            var valence = e_audio_feature.valence;
-
-            res_to_db[track_id].acousticness = acousticness;
-            res_to_db[track_id].danceability = danceability;
-            res_to_db[track_id].energy = energy;
-            res_to_db[track_id].instrumentalness = instrumentalness;
-            res_to_db[track_id].key = key;
-            res_to_db[track_id].liveness = liveness;
-            res_to_db[track_id].loudness = loudness;
-            res_to_db[track_id].mode = mode;
-            res_to_db[track_id].speechiness = speechiness;
-            res_to_db[track_id].tempo = tempo;
-            res_to_db[track_id].time_signature = time_signature;
-            res_to_db[track_id].valence = valence;
-        }
-
         // Fetch existing data from db
         var existing_db_data = await firebase.readSongsSelected();
 
@@ -609,23 +553,6 @@ export const SpotifyApiUtils = {
             img_url: track_img_url,
         }
 
-        // Build result with audio features
-        var audio_features_data = await this.getTracksAudioFeatures(track_id)
-        var audio_features = audio_features_data[0];
-
-        res_to_db.acousticness = audio_features.acousticness;
-        res_to_db.danceability = audio_features.danceability;
-        res_to_db.energy = audio_features.energy;
-        res_to_db.instrumentalness = audio_features.instrumentalness;
-        res_to_db.key = audio_features.key;
-        res_to_db.liveness = audio_features.liveness;
-        res_to_db.loudness = audio_features.loudness;
-        res_to_db.mode = audio_features.mode;
-        res_to_db.speechiness = audio_features.speechiness;
-        res_to_db.tempo = audio_features.tempo;
-        res_to_db.time_signature = audio_features.time_signature;
-        res_to_db.valence = audio_features.valence;
-        
         // push to db
         await firebase.writeToSongsSelectedSpecificTrack(track_id, res_to_db);
 
