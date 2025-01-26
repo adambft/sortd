@@ -69,7 +69,7 @@
         </div>
 
         <!-- Error Bar (Not availble in market) -->
-        <div class="row px-3" v-if="songNotAvailable">
+        <div class="row px-3" v-if="this.curr_track!==null && !this.curr_track.is_playable">
             <button @click="openNotAvailModal()" class="btn btn-danger rounded-3 col-12 py-1 m-0 d-flex justify-content-center align-items-center">
                 <font-awesome-icon icon="fa-solid fa-shop-lock" class="me-2" />
                 <p class="m-0">Song is not available in your market</p>
@@ -413,7 +413,7 @@ export default {
             newSongsTotalNum: null,
             newSongsAddedNum: null,
             songBeingAdded: null,
-            songNotAvailable: false,
+            findingReplacement: false,
 
             // Modals
             del_modal: null,
@@ -496,7 +496,7 @@ export default {
     methods: {
         async loadNewTrack(track_id) {
             // Clear previous data
-            this.songNotAvailable = false
+            this.findingReplacement = false
 
             this.curr_track = await SpotifyApiUtils.getOneTrack(track_id)
             this.artists_info = await SpotifyApiUtils.getArtists(this.all_artists_id_csv)
@@ -504,7 +504,6 @@ export default {
 
             // Check if available in user's country
             if (!this.curr_track.is_playable) {
-                this.songNotAvailable = true
                 this.openNotAvailModal()
             }
             
@@ -912,6 +911,7 @@ export default {
             this.searchResults = search_results
         },
         async searchForSongNOpenModal() {
+            this.findingReplacement = true
             this.searchQuery = this.curr_track.name + " " + this.all_artists
             this.openSearchModal()
             await this.searchForSongs()
@@ -935,6 +935,12 @@ export default {
             return all_artists
         },
         async searchForThisSong(track_id) {
+            // Deletes previous track IF findingReplacement is true
+            if (this.findingReplacement) {
+                this.confirmDelete()
+                this.findingReplacement = false
+            }
+
             this.search_modal.hide()
             this.prev_track_id = this.curr_track.id
             this.prev_track_was_saved = false
@@ -1110,8 +1116,8 @@ export default {
         }
     },
     watch: {
-        songNotAvailable: async function (newVal) {
-            if (newVal) {
+        curr_track: async function (newVal) {
+            if (!newVal.is_playable) {
                 // Pause playback
                 await this.pausePlayback();
                 window.EmbedController.pause();
