@@ -284,6 +284,48 @@ export const SpotifyApiUtils = {
         }
     },
 
+    async getUserProfile() {
+        // Get the user profile of the user
+
+        await this.updateAccessToken();
+
+        try {
+            const response = await axios.get('https://api.spotify.com/v1/me', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+            });
+            var user_info = response.data;
+
+            return user_info;
+        } catch (error) {
+            console.error("Error in running getUserProfile(): ", error);
+            throw error;
+        }
+    },
+
+    async getUserCountryCode() {
+        // Get the 2 digit country code of the user
+
+        // Check if country code is already stored
+        if (localStorage.getItem('spotifyUserCountryCode')) {
+            return localStorage.getItem('spotifyUserCountryCode');
+        }
+
+        await this.updateAccessToken();
+
+        try {
+            var user_info = await this.getUserProfile();
+        } catch (error) {
+            console.error("Error in running getUserCountryCode(): ", error);
+            throw error;
+        }
+
+        var country_code = user_info.country;
+        localStorage.setItem('spotifyUserCountryCode', country_code);
+        return country_code;
+    },
+
     async getPlaylists(num_playlists = 50, offset = 0) {
         // Get all playlists of the user
 
@@ -420,8 +462,11 @@ export const SpotifyApiUtils = {
 
         await this.updateAccessToken();
 
+        // Get country code (to check if track is available in the user's country) [To check: Check is_playable property]
+        var country_code = await this.getUserCountryCode();
+
         try {
-            const response = await axios.get(`https://api.spotify.com/v1/tracks/${track_id}`, {
+            const response = await axios.get(`https://api.spotify.com/v1/tracks/${track_id}?market=${country_code}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
                 }

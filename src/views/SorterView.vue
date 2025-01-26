@@ -68,6 +68,14 @@
             </div>
         </div>
 
+        <!-- Error Bar (Not availble in market) -->
+        <div class="row px-3" v-if="songNotAvailable">
+            <button @click="openNotAvailModal()" class="btn btn-danger rounded-3 col-12 py-1 m-0 d-flex justify-content-center align-items-center">
+                <font-awesome-icon icon="fa-solid fa-shop-lock" class="me-2" />
+                <p class="m-0">Song is not available in your market</p>
+            </button>
+        </div>
+
         <!-- Main Section -->
         <div class="row h-100">
             <!-- Music Player/ Controller -->
@@ -302,7 +310,7 @@
                 <div class="modal-body">
                     <div class="input-group mb-3">
                         <div class="form-floating">
-                            <input type="text" class="form-control" placeholder=" " aria-label="Song Search" aria-describedby="songSearchFieldBtn" id="songSearchField" v-model="searchQuery">
+                            <input type="text" class="form-control" placeholder=" " aria-label="Song Search" aria-describedby="songSearchFieldBtn" id="songSearchField" v-model="searchQuery" @keyup.enter="searchForSongs">
                             <label for="songSearchField">Search for song</label>
                         </div>
 
@@ -349,6 +357,27 @@
             </div>
         </div>
     </div>
+
+    <!-- Not availble in user's country -->
+    <div class="modal fade" tabindex="-1" id="notAvailableModal" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Song not available in your market</h5>
+                </div>
+
+                <div class="modal-body">
+                    <p>It seems this song is not available in your market. You won't be able to play this song.</p>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Sort anyways</button>
+                    <button type="button" class="btn btn-secondary" @click="openNotAvailModal(false); openDelConfirmationModal()">Discard</button>
+                    <button type="button" class="btn btn-success" @click="openNotAvailModal(false); searchForSongNOpenModal()">Search for Duplicates</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>
 
 
@@ -384,6 +413,7 @@ export default {
             newSongsTotalNum: null,
             newSongsAddedNum: null,
             songBeingAdded: null,
+            songNotAvailable: false,
 
             // Modals
             del_modal: null,
@@ -393,6 +423,7 @@ export default {
             add_playlist_modal: null,
             search_modal: null,
             episode_detected_modal: null,
+            not_avail_modal: null,
 
             // Playback variables
             curr_playback_name: null,
@@ -464,27 +495,37 @@ export default {
     },
     methods: {
         async loadNewTrack(track_id) {
+            // Clear previous data
+            this.songNotAvailable = false
+
             this.curr_track = await SpotifyApiUtils.getOneTrack(track_id)
             this.artists_info = await SpotifyApiUtils.getArtists(this.all_artists_id_csv)
             this.all_lastfm_genres = await LastFmApiUtils.getTrackTags(this.first_artist, this.curr_track.name, 10)
 
+            // Check if available in user's country
+            if (!this.curr_track.is_playable) {
+                this.songNotAvailable = true
+                this.openNotAvailModal()
+            }
+            
             // update any current playlist selections
             var sorted_data = await firebase.readSortedSongsSpecificTrack(track_id)
-            
-            this.resetPlaylistSelection()
 
+            this.resetPlaylistSelection()
+            
             if (sorted_data === null) {
                 return
             }
-
+            
             for (let i = 0; i < this.user_playlists.length; i++) {
                 let e_playlist = this.user_playlists[i]
                 let e_pl_id = e_playlist.id
-
+                
                 if (sorted_data.hasOwnProperty(e_pl_id)) {
                     this.user_playlists[i].to_add = sorted_data[e_pl_id]
                 }
             }
+
         },
         async updateSongsToSort(limit=this.num_songs_to_sort) {
 
@@ -613,15 +654,7 @@ export default {
             // load new track
             await this.loadRandomTrack()
 
-            if (!this.isMobile) {
-                // Load the new track URI
-                window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
-    
-                window.EmbedController.play();
-            } else {
-                // Play from spotify account
-                await SpotifyApiUtils.queueTrack(this.curr_track.id)
-            }
+            await this.playSong()
         },
         async confirmDelete() {
             // Clears any selection and pushes to db
@@ -650,6 +683,14 @@ export default {
                 this.episode_detected_modal.hide()
             }
         },
+        openNotAvailModal(to_open=true) {
+            // Check if user wants to skip over episode to track
+            if (to_open) {
+                this.not_avail_modal.show()
+            } else {
+                this.not_avail_modal.hide()
+            }
+        },
         async checkPlaylistBeforeSave () {
             // check if any playlist is selected
             for (let i = 0; i < this.user_playlists.length; i++) {
@@ -672,15 +713,7 @@ export default {
                 this.num_songs_sorted -= 1
             }
 
-            if (!this.isMobile) {
-                // Load the new track URI
-                window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
-    
-                window.EmbedController.play();
-            } else {
-                // Play from spotify account
-                await SpotifyApiUtils.queueTrack(this.curr_track.id)
-            }
+            await this.playSong()
 
             this.prev_track_id = null
             this.prev_track_was_saved = false
@@ -878,6 +911,11 @@ export default {
             var search_results = await SpotifyApiUtils.searchAll(this.searchQuery, 10)
             this.searchResults = search_results
         },
+        async searchForSongNOpenModal() {
+            this.searchQuery = this.curr_track.name + " " + this.all_artists
+            this.openSearchModal()
+            await this.searchForSongs()
+        },
         concatArtistsWithCommas(artists_data) {
             // Concatenates artists names with commas
 
@@ -903,15 +941,8 @@ export default {
 
             await this.loadNewTrack(track_id)
 
-            if (!this.isMobile) {
-                // Load the new track URI
-                window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
-                window.EmbedController.play();
-            } else {
-                // Play from spotify account
-                await SpotifyApiUtils.queueTrack(this.curr_track.id)
+            await this.playSong()
 
-            }
             this.searchQuery = ""
             this.searchResults = []
         },
@@ -942,18 +973,11 @@ export default {
                 this.curr_playback_name = "This Browser"
             }
         },
-        handleRemoteModeSwitched() {
+        async handleRemoteModeSwitched() {
             // Switch between remote and local playback
             this.isMobile = !this.isMobile
 
-            if (!this.isMobile) {
-                // Load the new track URI
-                window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
-                window.EmbedController.play();
-            } else {
-                // Play from spotify account
-                SpotifyApiUtils.queueTrack(this.curr_track.id)
-            }
+            await this.playSong()
         },
         async shuffleToNewSong() {
             // set prev track id
@@ -963,15 +987,7 @@ export default {
             // load new track
             await this.loadRandomTrack()
 
-            if (!this.isMobile) {
-                // Load the new track URI
-                window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
-    
-                window.EmbedController.play();
-            } else {
-                // Play from spotify account
-                await SpotifyApiUtils.queueTrack(this.curr_track.id)
-            }
+            this.playSong()
         },
         async skipOverCurEpisode() {
             // Skip over current episode to a random song
@@ -1074,6 +1090,32 @@ export default {
 
                 player.connect();
             }
+        },
+        loadNplayFromSDK() {
+            try {
+                window.EmbedController.loadUri(`spotify:track:${this.curr_track.id}`);
+                window.EmbedController.play();
+            } catch (error) {
+                console.error(error);
+            }
+        },
+        async playSong() {
+            if (!this.isMobile) {
+                // Load the new track URI
+                this.loadNplayFromSDK();
+            } else {
+                // Play from spotify account
+                await SpotifyApiUtils.queueTrack(this.curr_track.id)
+            }
+        }
+    },
+    watch: {
+        songNotAvailable: async function (newVal) {
+            if (newVal) {
+                // Pause playback
+                await this.pausePlayback();
+                window.EmbedController.pause();
+            }
         }
     },
     async mounted() {
@@ -1127,6 +1169,10 @@ export default {
         })
 
         this.episode_detected_modal = new bootstrap.Modal(document.getElementById('episodeDetectedModal'), {
+            keyboard: false
+        })
+
+        this.not_avail_modal = new bootstrap.Modal(document.getElementById('notAvailableModal'), {
             keyboard: false
         })
         // set up modals ========================================================== [END]
