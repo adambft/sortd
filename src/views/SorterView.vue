@@ -600,7 +600,7 @@ export default {
 
             return
         },
-        async saveSelection() {
+        async saveSelection(load_random_track_after=true) {
             // saves sorting selection to firebase
             this.prev_track_id = this.curr_track.id
             this.prev_track_was_saved = true
@@ -650,15 +650,17 @@ export default {
             // remove from songs_to_sort
             delete this.songs_to_sort[this.curr_track.id]
 
-            // load new track
-            await this.loadRandomTrack()
-
-            await this.playSong()
+            if (load_random_track_after) {
+                // load new track
+                await this.loadRandomTrack()
+    
+                await this.playSong()
+            }
         },
-        async confirmDelete() {
+        async confirmDelete(load_random_track_after=true) {
             // Clears any selection and pushes to db
             this.resetPlaylistSelection()
-            await this.saveSelection()
+            await this.saveSelection(load_random_track_after)
         },
         resetPlaylistSelection() {
             for (let i = 0; i < this.user_playlists.length; i++) {
@@ -937,7 +939,7 @@ export default {
         async searchForThisSong(track_id) {
             // Deletes previous track IF findingReplacement is true
             if (this.findingReplacement) {
-                this.confirmDelete()
+                this.confirmDelete(false)
                 this.findingReplacement = false
             }
 
