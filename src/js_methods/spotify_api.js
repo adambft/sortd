@@ -1,5 +1,6 @@
 import axios from 'axios';
-import * as firebase from './firebase'
+import * as firebase from './firebase';
+import Fuse from 'fuse.js';
 
 // Helper functions from Spotify API Official Documentation =========================================[start]
 const generateRandomString = (length) => {
@@ -930,21 +931,29 @@ export const SpotifyApiUtils = {
         }
     },
 
-    async searchForTrackInLibrary(query, add_in_library_property=false) {
+    async searchForTrackInLibrary(query, add_in_library_property = false) {
         // search for a track in the users existing songs
 
         var all_songs = await firebase.readSongsSelected();
 
-        var track_ids = [];
+        // Convert the object to an array for Fuse.js
+        var songsArray = Object.keys(all_songs).map(key => ({
+            id: key,
+            ...all_songs[key]
+        }));
 
-        // check each track if it matches the query (even partially)
-        for (var e_track_id in all_songs) {
-            var e_track = all_songs[e_track_id];
+        // Configure Fuse.js
+        const options = {
+            keys: ['name'],
+            threshold: 0.3, // Adjust the threshold for fuzzy matching (0 = exact match, 1 = match anything)
+        };
+        const fuse = new Fuse(songsArray, options);
 
-            if (e_track.name.toLowerCase().includes(query.toLowerCase())) {
-                track_ids.push(e_track_id);
-            }
-        }
+        // Perform the search
+        var result = fuse.search(query);
+
+        // Extract the track IDs from the search results
+        var track_ids = result.map(res => res.item.id);
 
         if (track_ids.length == 0) {
             return [];
