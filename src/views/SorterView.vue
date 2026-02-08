@@ -495,6 +495,8 @@ export default {
     },
     methods: {
         async loadNewTrack(track_id) {
+            console.log("Current song ID: ", track_id);
+
             // Clear previous data
             this.findingReplacement = false
 
