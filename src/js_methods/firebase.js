@@ -56,6 +56,11 @@ export async function writeDb(filepath, data) {
     });
 }
 
+export async function deleteDb(filepath) {
+    await writeDb(filepath, null);
+    return;
+}
+
 // Read functions -------------------------------------------------------------------
 export async function readAllAccountData() {
     // Returns all account data (reminder: this is <firebase_acc>/<spotify_acc> data. Each firebase_acc can have multiple spotify_acc)
@@ -200,6 +205,8 @@ export async function writeToSortedSongsSpecificTrack(track_id, dataToWrite) {
     return;
 }
 
+
+// Delete functions --------------------------------------------------------------------
 export async function deleteAllSpotifyAccountData() {
     // Deletes all data for the current Spotify account
     var firebase_id = await getCurrentUserID();
@@ -211,6 +218,18 @@ export async function deleteAllSpotifyAccountData() {
     return;
 }
 
+export async function deleteSongData(track_id) {
+    // Deletes song data from songs_selected and sorted_songs
+    var firebase_id = await getCurrentUserID();
+    var spotify_id = await SpotifyApiUtils.getUserId();
+
+    var filepath_songs_selected = `${firebase_id}/${spotify_id}/songs_selected/${track_id}`;
+    var filepath_sorted_songs = `${firebase_id}/${spotify_id}/sorted_songs/${track_id}`;
+
+    await deleteDb(filepath_songs_selected);
+    await deleteDb(filepath_sorted_songs)
+}
+ 
 
 // AUTH FUNCTIONS =======================================================================
 export async function login() {

@@ -458,7 +458,10 @@ export const SpotifyApiUtils = {
     },
 
     async getOneTrack(track_id) {
-        // Get one track
+        /* 
+            Get one track 
+            Important: Note that this endpoint may return a track with a different track ID
+        */
 
         await this.updateAccessToken();
 
@@ -1074,4 +1077,13 @@ export const SpotifyApiUtils = {
             throw error;
         }
     },
+
+    async replaceTrackInDb(delete_track_id, add_track_id) {
+        await Promise.all([
+            this.pushSingleTrackToDb(add_track_id), 
+            firebase.deleteSongData(delete_track_id)
+        ]);
+
+        return;
+    }
 }

@@ -501,6 +501,13 @@ export default {
             this.findingReplacement = false
 
             this.curr_track = await SpotifyApiUtils.getOneTrack(track_id)
+
+            // Handling for when returned track ID from Spotify does not match track ID provided
+            if (this.curr_track.id != track_id) {
+                console.log(`Spotify API returned different track ID. Replacing ${track_id} with ${this.curr_track.id}`)
+                SpotifyApiUtils.replaceTrackInDb(track_id, this.curr_track.id)
+            }
+
             this.artists_info = await SpotifyApiUtils.getArtists(this.all_artists_id_csv)
             this.all_lastfm_genres = await LastFmApiUtils.getTrackTags(this.first_artist, this.curr_track.name, 10)
 
@@ -510,7 +517,7 @@ export default {
             }
             
             // update any current playlist selections
-            var sorted_data = await firebase.readSortedSongsSpecificTrack(track_id)
+            var sorted_data = await firebase.readSortedSongsSpecificTrack(this.curr_track.id)
 
             this.resetPlaylistSelection()
             

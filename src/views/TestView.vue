@@ -1,6 +1,6 @@
 <template>
     <div class="p-3">
-        <button class="btn btn-primary me-3" @click="add()">Add</button>
+        <!-- <button class="btn btn-primary me-3" @click="add()">Add</button>
         <button class="btn btn-primary me-3" @click="get50tracks()">See playlist tracks (first 50)</button>
         <button class="btn btn-primary me-3" @click="getAllPlTracks()">Get all playlist tracks</button>
         <button class="btn btn-primary me-3" @click="getoneplaylist()">Get one playlist item</button>
@@ -8,17 +8,19 @@
         <button class="btn btn-primary me-3" @click='getsorted()'>Get sorted songs</button>
         <button class="btn btn-primary me-3" @click="getNoSong()">Get song that doesnt exit</button>
         <button class="btn btn-primary me-3" @click="getOneTrack()">Get 1 track</button>
-        <button class="btn btn-primary me-3" @click="pushOneTrack()">Push 1 track</button>
+        <button class="btn btn-primary me-3" @click="pushOneTrack()">Push 1 track</button> -->
 
-        <input type="text" v-model="searchQuery">
+        <!-- <input type="text" v-model="searchQuery">
         <button class="btn btn-success me-3" @click="searchTrack(searchQuery)">Search (general)</button>
-        <button class="btn btn-warning me-3" @click="searchInLibrary(searchQuery)">Search (in library)</button>
+        <button class="btn btn-warning me-3" @click="searchInLibrary(searchQuery)">Search (in library)</button> -->
     
-        <div v-for="(e_res, index) in searchResults" class="ms-3 mt-4">
+        <!-- <div v-for="(e_res, index) in searchResults" class="ms-3 mt-4">
             <img :src="e_res.album.images[0].url" width="100px">
             <h5>{{ e_res.name }}</h5>
             <p v-for="(e_artist, index2) in e_res.artists">{{ e_artist.name }}</p>
-        </div>
+        </div> -->
+
+        
     </div>
 </template>
 
