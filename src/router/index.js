@@ -42,11 +42,11 @@ const router = createRouter({
       name: 'sorter',
       component: SorterView,
     },
-    {
-      path: '/test',
-      name: 'test',
-      component: TestView,
-    },
+    // {
+    //   path: '/test',
+    //   name: 'test',
+    //   component: TestView,
+    // },
     {
       path: '/account',
       name: 'account',
