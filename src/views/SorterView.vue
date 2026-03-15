@@ -505,7 +505,7 @@ export default {
             // Handling for when returned track ID from Spotify does not match track ID provided
             if (this.curr_track.id != track_id) {
                 console.log(`Spotify API returned different track ID. Replacing ${track_id} with ${this.curr_track.id}`)
-                SpotifyApiUtils.replaceTrackInDb(track_id, this.curr_track.id)
+                await this.handleTrackIdChange(track_id, this.curr_track.id);
             }
 
             this.artists_info = await SpotifyApiUtils.getArtists(this.all_artists_id_csv)
@@ -818,6 +818,12 @@ export default {
                     this.songBeingAdded = song_data
     
                     let track_id = song_data.id
+
+                    // Handling if returned track ID different from initial
+                    if (track_id != song_id) {
+                        console.log(`Spotify API returned different track ID. Replacing ${song_id} with ${track_id}`)
+                        this.handleTrackIdChange(song_id, track_id)
+                    }
     
                     // add track to Firebase (songs_selected) IF not in Firebase already
                     if (all_user_songs === null || !all_user_songs.hasOwnProperty(track_id)) {
@@ -832,6 +838,10 @@ export default {
                     });
     
                     firebase.writeToSortedSongsSpecificTrack(track_id, playlists_obj)
+
+                    // Wait 3 seconds to prevent exceeding rate limits
+                    // TODO: Fix in the future to properly use Retry-After Header to retyr after that period
+                    await new Promise(r => setTimeout(r, 3000));
                 }
     
                 this.adding_new_songs_modal.hide()
@@ -1123,6 +1133,17 @@ export default {
             } else {
                 // Play from spotify account
                 await SpotifyApiUtils.queueTrack(this.curr_track.id)
+            }
+        },
+        async handleTrackIdChange(old_track_id, new_track_id) {
+            SpotifyApiUtils.replaceTrackInDb(old_track_id, new_track_id);
+            
+            // Go through playlists and delete
+            for (let i = 0; i < this.user_playlists.length; i++) {
+                let e_playlist = this.user_playlists[i]
+                let e_pl_id = e_playlist.id
+
+                SpotifyApiUtils.delete1TrackFromPlaylist(e_pl_id, old_track_id)
             }
         }
     },

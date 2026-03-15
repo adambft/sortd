@@ -779,6 +779,29 @@ export const SpotifyApiUtils = {
         }
     },
 
+    async add1TrackToPlaylist(playlist_id, track_id) {
+        // Add 1 track to playlist
+
+        await this.updateAccessToken();
+
+        try {
+            const response = await axios.post(`https://api.spotify.com/v1/playlists/${playlist_id}/items`, {
+                uris: [
+                    `spotify:track:${track_id}`
+                ],
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                }
+            });
+
+            return true;
+        } catch (error) {
+            console.error("Error in running add100TracksToPlaylist(): ", error);
+            throw error;
+        }
+    },
+
     async add100TracksToPlaylist(playlist_id, track_ids_arr) {
         // Add tracks to playlist (max 100 tracks per request)
 
@@ -835,6 +858,32 @@ export const SpotifyApiUtils = {
         }
 
         return true;
+    },
+
+    async delete1TrackFromPlaylist(playlist_id, track_id) {
+        // Delete 1 track from playlist
+
+        await this.updateAccessToken();
+
+        try {
+            const response = await axios.delete(`https://api.spotify.com/v1/playlists/${playlist_id}/items`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                },
+                data: {
+                    items: [
+                        {
+                            uri: `spotify:track:${track_id}`
+                        }
+                    ],
+                }
+            });
+
+            return true;
+        } catch (error) {
+            console.error("Error in running delete1TrackFromPlaylist(): ", error);
+            throw error;
+        }
     },
 
     async delete100TracksFromPlaylist(playlist_id, track_ids_arr) {
